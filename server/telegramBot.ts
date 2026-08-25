@@ -430,6 +430,13 @@ export async function syncTelegramIntegration(input: { webAppUrl: string | null;
   ]);
 }
 
+export async function syncTelegramProfileFromSavedSettings() {
+  const settings = await telegramDb.getTelegramSettings();
+  if (!settings?.webAppUrl) return false;
+  await syncTelegramIntegration({ webAppUrl: settings.webAppUrl, menuButtonText: settings.menuButtonText || "Статистика" });
+  return true;
+}
+
 export function registerTelegramWebhook(app: Express) {
   app.post("/api/telegram/webhook", async (req: Request, res: Response) => {
     const configuredSecret = getTelegramWebhookSecret(token());

@@ -41,4 +41,8 @@ describe("Telegram communication templates", () => {
     expect(message).toContain("После подтверждения получите баллы");
     expect(message).toContain("одинаковый набор заданий");
   });
+
+  it("keeps help readable with Telegram-safe bullet formatting", () => {
+    expect(formatParticipantHelp()).toContain("• Откройте *Мой ритм* через /menu");
+  });
 });

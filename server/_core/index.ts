@@ -5,7 +5,7 @@ import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
-import { registerTelegramWebhook } from "../telegramBot";
+import { registerTelegramWebhook, syncTelegramProfileFromSavedSettings } from "../telegramBot";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 
@@ -60,6 +60,13 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+    if (process.env.NODE_ENV === "production") {
+      void syncTelegramProfileFromSavedSettings()
+        .then(synced => {
+          if (synced) console.log("[Telegram] Profile, commands, and Mini App menu button synchronized");
+        })
+        .catch(error => console.warn("[Telegram] Profile synchronization skipped", error instanceof Error ? error.message : error));
+    }
   });
 }
 
