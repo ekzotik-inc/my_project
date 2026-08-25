@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatParticipantDashboard, formatReturningParticipantGreeting } from "./telegramBot";
+import { formatParticipantDashboard, formatReturningParticipantGreeting, PREMIUM_EMOJI } from "./telegramBot";
 
 describe("Telegram participant dashboard", () => {
   it("shows personal points and task states for an active period", () => {
@@ -13,13 +13,14 @@ describe("Telegram participant dashboard", () => {
       points: 40,
     } as never);
 
-    expect(message).toContain("*Есть дело, которое ждёт вашего шага*");
-    expect(message).toContain("*40 баллов*");
-    expect(message).toContain("Прогресс периода: *1 из 3* · 33%");
+    expect(message).toContain("Есть дело, которое ждёт вашего шага");
+    expect(message).toContain("40 баллов");
+    expect(message).toContain("Прогресс периода: <b>1 из 3</b> · 33%");
+    expect(message).toContain(`emoji-id="${PREMIUM_EMOJI.action.id}"`);
   });
 
   it("explains when no activity period is active", () => {
-    expect(formatParticipantDashboard({ period: null, assignments: [], points: 0 } as never)).toContain("*Сейчас — спокойная пауза*");
+    expect(formatParticipantDashboard({ period: null, assignments: [], points: 0 } as never)).toContain("Сейчас — спокойная пауза");
   });
 
   it("greets an approved participant without repeating the full route card", () => {
@@ -27,7 +28,7 @@ describe("Telegram participant dashboard", () => {
       fullName: "Анна Иванова",
       dashboard: { assignments: [{ status: "under_review" }], period: { title: "Неделя" } } as never,
     });
-    expect(message).toContain("*С возвращением, Анна*");
+    expect(message).toContain("С возвращением, Анна");
     expect(message).toContain("Ваш последний результат уже у P&C");
     expect(message).not.toContain("Прогресс периода");
   });

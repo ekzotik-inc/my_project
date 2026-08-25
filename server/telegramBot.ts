@@ -19,9 +19,67 @@ type TelegramMessage = {
 type TelegramCallback = { id: string; from: TelegramUser; message?: TelegramMessage; data?: string };
 export type TelegramUpdate = { update_id: number; message?: TelegramMessage; callback_query?: TelegramCallback };
 
-type InlineButton = { text: string; callback_data?: string; web_app?: { url: string }; url?: string };
+type ButtonStyle = "primary" | "success" | "danger";
+type InlineButton = { text: string; callback_data?: string; web_app?: { url: string }; url?: string; icon_custom_emoji_id?: string; style?: ButtonStyle };
 type ReplyButton = { text: string; request_contact?: boolean };
 type ReplyMarkup = { inline_keyboard?: InlineButton[][]; keyboard?: ReplyButton[][]; resize_keyboard?: boolean; one_time_keyboard?: boolean; remove_keyboard?: boolean };
+type TelegramParseMode = "Markdown" | "HTML";
+
+export const PREMIUM_EMOJI = {
+  route: { id: "6030687898141987254", fallback: "🧭" },
+  action: { id: "6032949275732742941", fallback: "🎯" },
+  score: { id: "6028338546736107668", fallback: "⭐️" },
+  review: { id: "6039486778597970865", fallback: "🔔" },
+  approved: { id: "5774022692642492953", fallback: "✅" },
+  submit: { id: "6039573425268201570", fallback: "📤" },
+  photo: { id: "5766975922620076409", fallback: "📷" },
+  note: { id: "5920046907782074235", fallback: "📝" },
+  team: { id: "5879905000972358125", fallback: "👥" },
+  applause: { id: "5994417835630137549", fallback: "👏" },
+  sparkle: { id: "5778226250149532337", fallback: "✨" },
+  hint: { id: "5767288287001580715", fallback: "💡" },
+} as const;
+
+type PremiumEmojiKey = keyof typeof PREMIUM_EMOJI;
+
+export function premiumEmoji(key: PremiumEmojiKey) {
+  const emoji = PREMIUM_EMOJI[key];
+  return `<tg-emoji emoji-id="${emoji.id}">${emoji.fallback}</tg-emoji>`;
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function stripPremiumEmoji(text: string) {
+  return text.replace(/<tg-emoji emoji-id="[0-9]+">(.*?)<\/tg-emoji>/g, "$1");
+}
+
+function hasPremiumEmoji(replyMarkup?: ReplyMarkup) {
+  return Boolean(replyMarkup?.inline_keyboard?.some(row => row.some(button => button.icon_custom_emoji_id || button.style)));
+}
+
+function withoutPremiumButtonDecoration(replyMarkup?: ReplyMarkup): ReplyMarkup | undefined {
+  if (!replyMarkup?.inline_keyboard) return replyMarkup;
+  return {
+    ...replyMarkup,
+    inline_keyboard: replyMarkup.inline_keyboard.map(row => row.map(({ icon_custom_emoji_id: _icon, style: _style, ...button }) => button)),
+  };
+}
+
+function parseModeForRich(text: string): TelegramParseMode {
+  return text.includes("<tg-emoji") ? "HTML" : "Markdown";
+}
+
+function premiumButton(input: { text: string; callbackData?: string; webAppUrl?: string; icon: PremiumEmojiKey; style?: ButtonStyle }): InlineButton {
+  return {
+    text: input.text,
+    ...(input.callbackData ? { callback_data: input.callbackData } : {}),
+    ...(input.webAppUrl ? { web_app: { url: input.webAppUrl } } : {}),
+    icon_custom_emoji_id: PREMIUM_EMOJI[input.icon].id,
+    ...(input.style ? { style: input.style } : {}),
+  };
+}
 
 function token() {
   const value = process.env.TELEGRAM_BOT_TOKEN;
@@ -51,18 +109,29 @@ async function telegramApi<T>(method: string, payload: Record<string, unknown>):
   return body.result as T;
 }
 
-async function sendMessage(chatId: string | number, text: string, replyMarkup?: ReplyMarkup, parseMode?: "Markdown") {
-  return telegramApi<{ message_id: number }>("sendMessage", {
+async function sendMessage(chatId: string | number, text: string, replyMarkup?: ReplyMarkup, parseMode?: TelegramParseMode) {
+  const selectedParseMode = parseMode;
+  const payload = {
     chat_id: String(chatId),
     text,
     reply_markup: replyMarkup,
-    ...(parseMode ? { parse_mode: parseMode } : {}),
+    ...(selectedParseMode ? { parse_mode: selectedParseMode } : {}),
     disable_web_page_preview: true,
-  });
+  };
+  try {
+    return await telegramApi<{ message_id: number }>("sendMessage", payload);
+  } catch (error) {
+    if (!text.includes("<tg-emoji") && !hasPremiumEmoji(replyMarkup)) throw error;
+    return telegramApi<{ message_id: number }>("sendMessage", {
+      ...payload,
+      text: stripPremiumEmoji(text),
+      reply_markup: withoutPremiumButtonDecoration(replyMarkup),
+    });
+  }
 }
 
 async function sendRichMessage(chatId: string | number, text: string, replyMarkup?: ReplyMarkup) {
-  return sendMessage(chatId, text, replyMarkup, "Markdown");
+  return sendMessage(chatId, text, replyMarkup, parseModeForRich(text));
 }
 
 function escapeMarkdown(value: string) {
@@ -77,14 +146,25 @@ async function sendDocument(chatId: string | number, document: string, caption?:
   return telegramApi<{ message_id: number }>("sendDocument", { chat_id: String(chatId), document, caption });
 }
 
-async function sendPhoto(chatId: string | number, photo: string, caption?: string, replyMarkup?: ReplyMarkup, parseMode?: "Markdown") {
-  return telegramApi<{ message_id: number }>("sendPhoto", {
+async function sendPhoto(chatId: string | number, photo: string, caption?: string, replyMarkup?: ReplyMarkup, parseMode?: TelegramParseMode) {
+  const selectedParseMode = parseMode || (caption?.includes("<tg-emoji") ? "HTML" : undefined);
+  const payload = {
     chat_id: String(chatId),
     photo,
     caption,
     reply_markup: replyMarkup,
-    ...(parseMode ? { parse_mode: parseMode } : {}),
-  });
+    ...(selectedParseMode ? { parse_mode: selectedParseMode } : {}),
+  };
+  try {
+    return await telegramApi<{ message_id: number }>("sendPhoto", payload);
+  } catch (error) {
+    if (!caption?.includes("<tg-emoji") && !hasPremiumEmoji(replyMarkup)) throw error;
+    return telegramApi<{ message_id: number }>("sendPhoto", {
+      ...payload,
+      ...(caption ? { caption: stripPremiumEmoji(caption) } : {}),
+      reply_markup: withoutPremiumButtonDecoration(replyMarkup),
+    });
+  }
 }
 
 export async function sendBroadcastMessage(input: { chatId: string; message: string; imageUrl: string | null; buttons: { label: string; url: string }[] }) {
@@ -104,7 +184,7 @@ function statusMark(status: string) {
 }
 
 export function formatParticipantDashboard(dashboard: Awaited<ReturnType<typeof telegramDb.getParticipantActivityDashboard>>) {
-  if (!dashboard.period) return "*Добрые дела*\n\n*Сейчас — спокойная пауза*\nКоманда P&C готовит следующий период. Когда появится первое дело, я напишу вам здесь.\n\n_Пока просто оставайтесь на связи._";
+  if (!dashboard.period) return `<b>${premiumEmoji("sparkle")} Добрые дела</b>\n\n<b>Сейчас — спокойная пауза</b>\nКоманда P&amp;C готовит следующий период. Когда появится первое дело, я напишу вам здесь.\n\n<i>Пока просто оставайтесь на связи.</i>`;
   const completed = dashboard.assignments.filter(item => item.status === "approved").length;
   const reviewing = dashboard.assignments.filter(item => item.status === "under_review").length;
   const available = dashboard.assignments.filter(item => item.status === "assigned" || item.status === "in_progress" || item.status === "rejected").length;
@@ -123,12 +203,13 @@ export function formatParticipantDashboard(dashboard: Awaited<ReturnType<typeof 
       : completed > 0
         ? "Спасибо за вклад. Он уже стал частью общего результата команды."
         : "Как только P&C откроет задание, оно появится здесь.";
-  return `*${escapeMarkdown(dashboard.period.title)}*\n\n*${headline}*\n${detail}\n\nПрогресс периода: *${completed} из ${dashboard.assignments.length}* · ${completion}%\nВаш результат: *${dashboard.points} баллов*`;
+  const statusIcon = available > 0 ? premiumEmoji("action") : reviewing > 0 ? premiumEmoji("review") : completed > 0 ? premiumEmoji("approved") : premiumEmoji("sparkle");
+  return `<b>${premiumEmoji("route")} ${escapeHtml(dashboard.period.title)}</b>\n\n<b>${statusIcon} ${headline}</b>\n${detail}\n\nПрогресс периода: <b>${completed} из ${dashboard.assignments.length}</b> · ${completion}%\nВаш результат: <b>${premiumEmoji("score")} ${dashboard.points} баллов</b>`;
 }
 
 export function formatReturningParticipantGreeting(input: { fullName?: string | null; dashboard: Awaited<ReturnType<typeof telegramDb.getParticipantActivityDashboard>> }) {
   const firstName = input.fullName?.trim().split(/\s+/)[0];
-  const greeting = firstName ? `, ${escapeMarkdown(firstName)}` : "";
+  const greeting = firstName ? `, ${escapeHtml(firstName)}` : "";
   const reviewing = input.dashboard.assignments.filter(item => item.status === "under_review").length;
   const available = input.dashboard.assignments.filter(item => item.status === "assigned" || item.status === "in_progress" || item.status === "rejected").length;
   const status = reviewing > 0
@@ -136,11 +217,11 @@ export function formatReturningParticipantGreeting(input: { fullName?: string | 
     : available > 0
       ? "В маршруте есть доступное дело. Откройте его, когда будете готовы."
       : "Откройте маршрут, чтобы увидеть актуальный статус периода.";
-  return `*С возвращением${greeting}*\n\n${status}`;
+  return `<b>${premiumEmoji("route")} С возвращением${greeting}</b>\n\n${status}`;
 }
 
 export function formatNewActivityNotification(input: { periodTitle: string; title: string; description: string; points: number }) {
-  return `*Добрые дела* · _${escapeMarkdown(input.periodTitle)}_\n────────────\n\n*Новое дело для всей команды*\n\n*${escapeMarkdown(input.title)}*\n${escapeMarkdown(input.description)}\n\nПосле подтверждения P&C ваш вклад принесёт *+${input.points} баллов*.\n\n_Откройте задание, когда будет удобно: все шаги и материалы уже внутри._`;
+  return `<b>${premiumEmoji("sparkle")} Добрые дела</b> · <i>${escapeHtml(input.periodTitle)}</i>\n\n<b>${premiumEmoji("action")} Новое дело для всей команды</b>\n\n<b>${escapeHtml(input.title)}</b>\n${escapeHtml(input.description)}\n\nПосле подтверждения P&amp;C ваш вклад принесёт <b>${premiumEmoji("score")} +${input.points} баллов</b>.\n\n<i>Откройте задание, когда будет удобно: все шаги и материалы уже внутри.</i>`;
 }
 
 export function getActivityNotificationPresentation(input: { periodTitle: string; title: string; description: string; points: number; coverImageUrl?: string | null }) {
@@ -148,12 +229,12 @@ export function getActivityNotificationPresentation(input: { periodTitle: string
 }
 
 export function formatNewPeriodNotification(input: { title: string; description?: string }) {
-  const description = input.description?.trim() ? `\n${escapeMarkdown(input.description.trim())}` : "";
-  return `*Добрые дела*\n────────────\n\n*Открыт новый период*\n\n*${escapeMarkdown(input.title)}*${description}\n\nВ этом периоде у всех участников будет одинаковый маршрут. Первое задание появится здесь с понятными шагами и условиями проверки.`;
+  const description = input.description?.trim() ? `\n${escapeHtml(input.description.trim())}` : "";
+  return `<b>${premiumEmoji("sparkle")} Добрые дела</b>\n\n<b>Открыт новый период</b>\n\n<b>${escapeHtml(input.title)}</b>${description}\n\n${premiumEmoji("team")} В этом периоде у всех участников будет одинаковый маршрут. Первое задание появится здесь с понятными шагами и условиями проверки.`;
 }
 
 export function formatReportApprovalNotification(input: { title: string; points: number }) {
-  return `*Добрые дела*\n────────────\n\n*Ваш вклад подтверждён*\n\nP&C приняла результат по заданию *${escapeMarkdown(input.title)}*.\n\nНа ваш счёт добавлено *+${input.points} баллов*. Спасибо, что сделали это дело реальным — оно уже усилило результат команды.\n\n_В меню можно посмотреть, какой следующий шаг появился в вашем маршруте._`;
+  return `<b>${premiumEmoji("applause")} Ваш вклад подтверждён</b>\n\nP&amp;C приняла результат по заданию <b>${escapeHtml(input.title)}</b>.\n\nНа ваш счёт добавлено <b>${premiumEmoji("score")} +${input.points} баллов</b>. Спасибо, что сделали это дело реальным — оно уже усилило результат команды.\n\n<i>В меню можно посмотреть, какой следующий шаг появился в вашем маршруте.</i>`;
 }
 
 async function notifyApprovedParticipants(text: string, replyMarkup?: ReplyMarkup) {
@@ -165,16 +246,16 @@ async function notifyApprovedParticipants(text: string, replyMarkup?: ReplyMarku
 export async function notifyNewActivity(input: { periodTitle: string; title: string; description: string; points: number; coverImageUrl?: string | null }) {
   const recipients = await telegramDb.listApprovedParticipantChats();
   const presentation = getActivityNotificationPresentation(input);
-  const replyMarkup: ReplyMarkup = { inline_keyboard: [[{ text: "Начать задание", callback_data: "menu:refresh" }]] };
+  const replyMarkup: ReplyMarkup = { inline_keyboard: [[premiumButton({ text: "Открыть задание", callbackData: "menu:refresh", icon: "action", style: "primary" })]] };
   const delivery = await Promise.allSettled(recipients.map(recipient => presentation.photo
-    ? sendPhoto(recipient.telegramChatId, presentation.photo, presentation.text, replyMarkup, "Markdown")
+    ? sendPhoto(recipient.telegramChatId, presentation.photo, presentation.text, replyMarkup, "HTML")
     : sendRichMessage(recipient.telegramChatId, presentation.text, replyMarkup)
   ));
   return delivery.filter(result => result.status === "fulfilled").length;
 }
 
 export async function notifyNewPeriod(input: { title: string; description?: string }) {
-  return notifyApprovedParticipants(formatNewPeriodNotification(input), { inline_keyboard: [[{ text: "Мой маршрут", callback_data: "menu:refresh" }]] });
+  return notifyApprovedParticipants(formatNewPeriodNotification(input), { inline_keyboard: [[premiumButton({ text: "Открыть маршрут", callbackData: "menu:refresh", icon: "route", style: "primary" })]] });
 }
 
 async function sendParticipantMenu(telegramUserId: string, chatId: string) {
@@ -186,9 +267,9 @@ async function sendParticipantMenu(telegramUserId: string, chatId: string) {
   const settings = await telegramDb.getTelegramSettings();
   const taskButtons: InlineButton[][] = dashboard.assignments
     .filter(item => item.status !== "approved" && item.status !== "under_review")
-    .map(item => [{ text: `${statusMark(item.status)} ${item.title} · ${formatStatus(item.status)}`, callback_data: `task:${item.id}` }]);
-  const actionButtons: InlineButton[][] = [[{ text: "Проверить статус", callback_data: "menu:refresh" }]];
-  if (settings?.webAppUrl) actionButtons.unshift([{ text: settings.menuButtonText || "Посмотреть вклад", web_app: { url: settings.webAppUrl } }]);
+    .map(item => [premiumButton({ text: `${statusMark(item.status)} ${item.title} · ${formatStatus(item.status)}`, callbackData: `task:${item.id}`, icon: "action" })]);
+  const actionButtons: InlineButton[][] = [[premiumButton({ text: "Проверить статус", callbackData: "menu:refresh", icon: "review" })]];
+  if (settings?.webAppUrl) actionButtons.unshift([premiumButton({ text: settings.menuButtonText || "Посмотреть вклад", webAppUrl: settings.webAppUrl, icon: "score", style: "primary" })]);
   return sendRichMessage(chatId, formatParticipantDashboard(dashboard), { inline_keyboard: [...taskButtons, ...actionButtons] });
 }
 
@@ -197,7 +278,7 @@ async function sendReturningParticipantGreeting(telegramUserId: string, chatId: 
   if (!participant || participant.status !== "approved") return sendParticipantMenu(telegramUserId, chatId);
   const dashboard = await telegramDb.getParticipantActivityDashboard(participant.id);
   return sendRichMessage(chatId, formatReturningParticipantGreeting({ fullName: participant.fullName, dashboard }), {
-    inline_keyboard: [[{ text: "Открыть мой маршрут", callback_data: "menu:refresh" }]],
+    inline_keyboard: [[premiumButton({ text: "Открыть мой маршрут", callbackData: "menu:refresh", icon: "route", style: "primary" })]],
   });
 }
 
@@ -206,19 +287,19 @@ export function formatParticipantHelp() {
 }
 
 export function formatWelcomeMessage(firstName?: string) {
-  const greeting = firstName?.trim() ? `, ${escapeMarkdown(firstName.trim())}` : "";
-  return `*Добрые дела*\n────────────\n\n*Рады видеть вас${greeting}*\n\nЗдесь простые действия команды превращаются в заметный общий вклад. Вы сможете выбрать доброе дело, пройти его в своём темпе и увидеть, как результат растёт вместе с командой.\n\n_Сначала коротко расскажу, как устроен маршрут._`;
+  const greeting = firstName?.trim() ? `, ${escapeHtml(firstName.trim())}` : "";
+  return `<b>${premiumEmoji("sparkle")} Добрые дела</b>\n\n<b>Рады видеть вас${greeting}</b>\n\nЗдесь простые действия команды превращаются в заметный общий вклад. Вы сможете выбрать доброе дело, пройти его в своём темпе и увидеть, как результат растёт вместе с командой.\n\n<i>${premiumEmoji("hint")} Сначала коротко расскажу, как устроен маршрут.</i>`;
 }
 
 export function formatWelcomeGuide() {
-  return "*Ваш маршрут в трёх шагах*\n────────────\n\n*1.* Оставьте короткий профиль — P&C подтвердит участие.\n*2.* Выбирайте задания, которые доступны всем в текущем периоде.\n*3.* Отправляйте результат: баллы появляются только после решения P&C.\n\n_Никакой гонки. Важен настоящий вклад и комфортный для вас темп._";
+  return `<b>${premiumEmoji("route")} Ваш маршрут в трёх шагах</b>\n\n<b>1.</b> Оставьте короткий профиль — P&amp;C подтвердит участие.\n<b>2.</b> Выбирайте задания, которые доступны всем в текущем периоде.\n<b>3.</b> Отправляйте результат: баллы появляются только после решения P&amp;C.\n\n<i>${premiumEmoji("hint")} Никакой гонки. Важен настоящий вклад и комфортный для вас темп.</i>`;
 }
 
 async function sendWelcome(chatId: string, firstName?: string) {
   return sendRichMessage(chatId, formatWelcomeMessage(firstName), {
     inline_keyboard: [
-      [{ text: "Как это работает", callback_data: "welcome:guide" }],
-      [{ text: "Присоединиться к команде", callback_data: "welcome:register" }],
+      [premiumButton({ text: "Как это работает", callbackData: "welcome:guide", icon: "hint" })],
+      [premiumButton({ text: "Присоединиться к команде", callbackData: "welcome:register", icon: "team", style: "primary" })],
     ],
   });
 }
@@ -226,9 +307,9 @@ async function sendWelcome(chatId: string, firstName?: string) {
 async function beginRegistration(telegramUserId: string, chatId: string) {
   const existing = await telegramDb.getParticipantByTelegramId(telegramUserId);
   if (existing?.status === "approved") return sendParticipantMenu(telegramUserId, chatId);
-  if (existing?.status === "pending") return sendRichMessage(chatId, "*Добрые дела*\n────────────\n\n*Заявка уже у P&C*\n\nДанные проверяются. Ничего дополнительно делать не нужно: я напишу сразу, когда откроется доступ к вашему маршруту.");
+  if (existing?.status === "pending") return sendRichMessage(chatId, `<b>${premiumEmoji("review")} Заявка уже у P&amp;C</b>\n\nДанные проверяются. Ничего дополнительно делать не нужно: я напишу сразу, когда откроется доступ к вашему маршруту.`);
   await telegramDb.upsertTelegramConversation({ telegramUserId, telegramChatId: chatId, state: "registration_phone" });
-  return sendRichMessage(chatId, "*Добрые дела*\n────────────\n\n*Начнём с контакта*\n\nЭто первый из трёх коротких шагов. Номер нужен только для заявки P&C и остаётся внутри команды.\n\n*1 из 3* · поделитесь номером телефона", {
+  return sendRichMessage(chatId, `<b>${premiumEmoji("team")} Начнём с контакта</b>\n\nЭто первый из трёх коротких шагов. Номер нужен только для заявки P&amp;C и остаётся внутри команды.\n\n<b>1 из 3</b> · поделитесь номером телефона`, {
     keyboard: [[{ text: "Поделиться номером", request_contact: true }]],
     resize_keyboard: true,
     one_time_keyboard: true,
@@ -259,7 +340,7 @@ async function promptForReportStep(telegramUserId: string, chatId: string, assig
   const step = assignment.steps.find(item => item.stepOrder === stepOrder);
   if (!step) {
     await telegramDb.clearTelegramConversation(telegramUserId);
-    return sendRichMessage(chatId, "*Материалы собраны*\n────────────\n\nВы прошли все шаги. Посмотрите на результат ещё раз и отправьте его P&C, когда будете готовы.\n\n_Баллы появляются только после явного подтверждения результата._", { inline_keyboard: [[{ text: "Отправить P&C", callback_data: `report:submit:${assignmentId}` }]] });
+    return sendRichMessage(chatId, `<b>${premiumEmoji("submit")} Материалы собраны</b>\n\nВы прошли все шаги. Посмотрите на результат ещё раз и отправьте его P&amp;C, когда будете готовы.\n\n<i>Баллы появляются только после явного подтверждения результата.</i>`, { inline_keyboard: [[premiumButton({ text: "Отправить P&C", callbackData: `report:submit:${assignmentId}`, icon: "submit", style: "primary" })]] });
   }
   await telegramDb.upsertTelegramConversation({ telegramUserId, telegramChatId: chatId, state: "report_step", assignmentId, stepOrder });
   const inputHint = step.inputType === "text" ? "Отправьте текстовый ответ." : step.inputType === "photo" ? "Отправьте фотографию." : step.inputType === "file" ? "Отправьте файл или фото документа." : "Отправьте текст, фото или файл.";
@@ -305,13 +386,13 @@ export async function notifyRegistrationDecision(input: {
   moderatorTelegramUserId?: string;
 }) {
   if (input.status === "approved") {
-    await sendRichMessage(input.participant.telegramChatId, "*Добрые дела*\n────────────\n\n*Вы в команде*\n\nP&C подтвердила заявку. Теперь вам доступен личный маршрут, задания и общая статистика команды.\n\n_Откройте меню — там уже видно, с чего начать._");
-    await notifyModerators(`✅ *Заявка ${escapeMarkdown(input.participant.fullName || "участника")} одобрена.*`, input.moderatorTelegramUserId);
+    await sendRichMessage(input.participant.telegramChatId, `<b>${premiumEmoji("team")} Вы в команде</b>\n\nP&amp;C подтвердила заявку. Теперь вам доступен личный маршрут, задания и общая статистика команды.\n\n<i>${premiumEmoji("hint")} Откройте меню — там уже видно, с чего начать.</i>`);
+    await notifyModerators(`${premiumEmoji("approved")} <b>Заявка ${escapeHtml(input.participant.fullName || "участника")} одобрена.</b>`, input.moderatorTelegramUserId);
     return;
   }
   const reason = input.reason?.trim() || "Пожалуйста, уточните данные и отправьте заявку снова.";
-  await sendRichMessage(input.participant.telegramChatId, `*Нужно немного уточнить заявку*\n────────────\n\n${escapeMarkdown(reason)}\n\n_Отправьте /start, обновите данные и вернитесь в маршрут. После уточнения вы сможете участвовать как обычно._`);
-  await notifyModerators(`🛠 *Заявка ${escapeMarkdown(input.participant.fullName || "участника")} возвращена на уточнение.*`, input.moderatorTelegramUserId);
+  await sendRichMessage(input.participant.telegramChatId, `<b>${premiumEmoji("note")} Нужно немного уточнить заявку</b>\n\n${escapeHtml(reason)}\n\n<i>Отправьте /start, обновите данные и вернитесь в маршрут. После уточнения вы сможете участвовать как обычно.</i>`);
+  await notifyModerators(`${premiumEmoji("note")} <b>Заявка ${escapeHtml(input.participant.fullName || "участника")} возвращена на уточнение.</b>`, input.moderatorTelegramUserId);
 }
 
 async function sendReportToModeration(assignmentId: number) {
@@ -319,17 +400,17 @@ async function sendReportToModeration(assignmentId: number) {
   if (!settings?.reportModerationChatId) return;
   const report = await telegramDb.getReportForModeration(assignmentId);
   if (!report) return;
-  await sendRichMessage(settings.reportModerationChatId, `*Новый результат для P&C*\n────────────\n\n*${escapeMarkdown(report.activityTitle)}*\n${escapeMarkdown(report.participantName || "Без имени")} · ${escapeMarkdown(report.participantTeam || "команда не выбрана")}\n\nПосле подтверждения участник получит *+${report.activityPoints} баллов*.\n\n_Материалы и шаги — ниже. Выберите решение, когда всё проверите._`);
+  await sendRichMessage(settings.reportModerationChatId, `<b>${premiumEmoji("review")} Новый результат для P&amp;C</b>\n\n<b>${escapeHtml(report.activityTitle)}</b>\n${escapeHtml(report.participantName || "Без имени")} · ${escapeHtml(report.participantTeam || "команда не выбрана")}\n\nПосле подтверждения участник получит <b>${premiumEmoji("score")} +${report.activityPoints} баллов</b>.\n\n<i>Материалы и шаги — ниже. Выберите решение, когда всё проверите.</i>`);
   const evidence = await telegramDb.getReportEvidence(assignmentId);
   for (const item of evidence) {
     const caption = `Шаг ${item.stepOrder}: ${item.instruction}${item.textResponse ? `\nОтвет: ${item.textResponse}` : ""}`;
     if (item.telegramFileId) {
       if (item.attachmentKind === "photo") await sendPhoto(settings.reportModerationChatId, item.telegramFileId, caption);
       else await sendDocument(settings.reportModerationChatId, item.telegramFileId, caption);
-    } else if (item.textResponse) await sendRichMessage(settings.reportModerationChatId, `🧩 *Шаг ${item.stepOrder}*\n${escapeMarkdown(caption)}`);
+    } else if (item.textResponse) await sendRichMessage(settings.reportModerationChatId, `<b>${premiumEmoji("note")} Шаг ${item.stepOrder}</b>\n${escapeHtml(caption)}`);
   }
-  await sendRichMessage(settings.reportModerationChatId, "*Решение P&C*\n\nПодтверждение начислит баллы. Если нужны правки, участник получит ваш комментарий и сможет обновить материалы.", { inline_keyboard: [[{ text: "Подтвердить результат", callback_data: `report:approve:${assignmentId}` }, { text: "Попросить доработать", callback_data: `report:reject:${assignmentId}` }]] });
-  await notifyModerators(`🔎 *Новый отчёт ожидает проверки:* ${escapeMarkdown(report.activityTitle)} от ${escapeMarkdown(report.participantName || "участника")}.`);
+  await sendRichMessage(settings.reportModerationChatId, `<b>${premiumEmoji("approved")} Решение P&amp;C</b>\n\nПодтверждение начислит баллы. Если нужны правки, участник получит ваш комментарий и сможет обновить материалы.`, { inline_keyboard: [[premiumButton({ text: "Подтвердить результат", callbackData: `report:approve:${assignmentId}`, icon: "approved", style: "success" }), premiumButton({ text: "Попросить доработать", callbackData: `report:reject:${assignmentId}`, icon: "note" })]] });
+  await notifyModerators(`${premiumEmoji("review")} <b>Новый отчёт ожидает проверки:</b> ${escapeHtml(report.activityTitle)} от ${escapeHtml(report.participantName || "участника")}.`);
 }
 
 async function handleRegistrationConversation(message: TelegramMessage, conversation: NonNullable<Awaited<ReturnType<typeof telegramDb.getTelegramConversation>>>) {
@@ -355,7 +436,7 @@ async function handleReportStep(message: TelegramMessage, conversation: NonNulla
   if (!assignment || !step) return;
   if (message.text?.trim() && step.inputType !== "photo" && step.inputType !== "file") {
     await telegramDb.saveReportTextStep({ assignmentId: assignment.id, participantId: participant.id, stepId: step.id, text: message.text.trim() });
-    await sendRichMessage(message.chat.id, `*Шаг ${step.stepOrder} сохранён*\n_Переходим дальше._`);
+    await sendRichMessage(message.chat.id, `<b>${premiumEmoji("approved")} Шаг ${step.stepOrder} сохранён</b>\n<i>Переходим дальше.</i>`);
     return promptForReportStep(userId, String(message.chat.id), assignment.id, step.stepOrder + 1);
   }
   const photo = message.photo?.at(-1);
@@ -364,7 +445,7 @@ async function handleReportStep(message: TelegramMessage, conversation: NonNulla
   const isReceipt = /чек|receipt/i.test(step.instruction);
   const stored = await storeTelegramAttachment({ telegramUserId: userId, assignmentId: assignment.id, stepId: step.id, fileId: photo?.file_id || document!.file_id, kind: photo ? "photo" : isReceipt ? "receipt" : "file", name: document?.file_name, mimeType: document?.mime_type });
   await telegramDb.saveReportAttachment({ assignmentId: assignment.id, participantId: participant.id, stepId: step.id, kind: photo ? "photo" : isReceipt ? "receipt" : "file", storageKey: stored.key, url: stored.url, telegramFileId: photo?.file_id || document!.file_id, originalName: stored.originalName, mimeType: document?.mime_type || "image/jpeg" });
-  await sendRichMessage(message.chat.id, `*Шаг ${step.stepOrder} сохранён*\n_Переходим дальше._`);
+  await sendRichMessage(message.chat.id, `<b>${premiumEmoji("photo")} Шаг ${step.stepOrder} сохранён</b>\n<i>Переходим дальше.</i>`);
   return promptForReportStep(userId, String(message.chat.id), assignment.id, step.stepOrder + 1);
 }
 
@@ -375,8 +456,8 @@ async function handleModeratorText(message: TelegramMessage, conversation: NonNu
   if (conversation.state === "moderation_reject_report") {
     const result = await telegramDb.moderateReport({ assignmentId: conversation.assignmentId, moderatorTelegramId: moderatorId, decision: "rejected", comment: message.text.trim() });
     await telegramDb.clearTelegramConversation(moderatorId);
-    await sendRichMessage(result.report.participantChatId, `*P&C просит немного доработать результат*\n────────────\n\n*${escapeMarkdown(result.report.activityTitle)}*\n\n${escapeMarkdown(message.text.trim())}\n\n_Откройте задание в меню, дополните материалы и отправьте результат повторно. Всё остальное уже сохранено._`);
-    await notifyModerators(`🛠 *Отчёт ${escapeMarkdown(result.report.activityTitle)} возвращён на доработку.*`, moderatorId);
+    await sendRichMessage(result.report.participantChatId, `<b>${premiumEmoji("note")} P&amp;C просит немного доработать результат</b>\n\n<b>${escapeHtml(result.report.activityTitle)}</b>\n\n${escapeHtml(message.text.trim())}\n\n<i>Откройте задание в меню, дополните материалы и отправьте результат повторно. Всё остальное уже сохранено.</i>`);
+    await notifyModerators(`${premiumEmoji("note")} <b>Отчёт ${escapeHtml(result.report.activityTitle)} возвращён на доработку.</b>`, moderatorId);
     return sendRichMessage(message.chat.id, "*Комментарий отправлен*\nУчастник может дополнить материалы и вернуться с обновлённым результатом.");
   }
   if (conversation.state === "moderation_reject_registration") {
@@ -406,7 +487,7 @@ async function handleCallback(callback: TelegramCallback) {
   const userId = String(callback.from.id);
   try {
     if (data === "menu:refresh") return sendParticipantMenu(userId, chatId);
-    if (data === "welcome:guide") return sendRichMessage(chatId, formatWelcomeGuide(), { inline_keyboard: [[{ text: "Присоединиться к команде", callback_data: "welcome:register" }]] });
+    if (data === "welcome:guide") return sendRichMessage(chatId, formatWelcomeGuide(), { inline_keyboard: [[premiumButton({ text: "Присоединиться к команде", callbackData: "welcome:register", icon: "team", style: "primary" })]] });
     if (data === "welcome:register") return beginRegistration(userId, chatId);
     if (data.startsWith("reg:team:")) {
       const conversation = await telegramDb.getTelegramConversation(userId);
@@ -424,7 +505,7 @@ async function handleCallback(callback: TelegramCallback) {
       if (!participant || participant.status !== "approved") throw new Error("Approval is required");
       const assignmentId = Number(data.split(":")[1]);
       const assignment = await telegramDb.beginActivityReport(assignmentId, participant.id);
-      await sendRichMessage(chatId, `*Добрые дела*\n────────────\n\n*${escapeMarkdown(assignment.title)}*\n\n${escapeMarkdown(assignment.description)}\n\nПосле подтверждения P&C ваш вклад принесёт *+${assignment.points} баллов*.\n\n_Пройдите шаги в своём темпе: всё сохранится по ходу работы._`);
+      await sendRichMessage(chatId, `<b>${premiumEmoji("action")} ${escapeHtml(assignment.title)}</b>\n\n${escapeHtml(assignment.description)}\n\nПосле подтверждения P&amp;C ваш вклад принесёт <b>${premiumEmoji("score")} +${assignment.points} баллов</b>.\n\n<i>Пройдите шаги в своём темпе: всё сохранится по ходу работы.</i>`);
       return promptForReportStep(userId, chatId, assignment.id, 1);
     }
     if (data.startsWith("report:submit:")) {
@@ -433,7 +514,7 @@ async function handleCallback(callback: TelegramCallback) {
       const assignmentId = Number(data.split(":")[2]);
       await telegramDb.submitActivityReport(assignmentId, participant.id);
       await sendReportToModeration(assignmentId);
-      return sendRichMessage(chatId, "*Результат у P&C*\n────────────\n\nМатериалы уже переданы на проверку. Когда P&C примет решение, я сразу обновлю ваш маршрут и, при подтверждении, добавлю баллы.");
+      return sendRichMessage(chatId, `<b>${premiumEmoji("review")} Результат у P&amp;C</b>\n\nМатериалы уже переданы на проверку. Когда P&amp;C примет решение, я сразу обновлю ваш маршрут и, при подтверждении, добавлю баллы.`);
     }
     if (data.startsWith("reg:approve:") || data.startsWith("reg:reject:")) {
       if (!(await telegramDb.isTelegramModerator(userId))) throw new Error("Moderator permissions are required");
