@@ -20,7 +20,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { CalendarRange, CheckSquare2, Download, HeartHandshake, LayoutDashboard, LogOut, PanelLeft, Send, Settings, Sparkles, Users, UsersRound } from "lucide-react";
+import { CalendarRange, CheckSquare2, Download, HeartHandshake, LayoutDashboard, LogOut, MessageCircleHeart, PanelLeft, Send, Settings, Sparkles, Users, UsersRound } from "lucide-react";
 import { CSSProperties, FormEvent, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -33,6 +33,7 @@ const menuItems = [
   { icon: CalendarRange, label: "Периоды", path: "/periods", access: "chief" },
   { icon: CheckSquare2, label: "Активности", path: "/activities", access: "chief" },
   { icon: Send, label: "Рассылки", path: "/broadcasts", access: "chief" },
+  { icon: MessageCircleHeart, label: "Ритм общения", path: "/communication", access: "chief" },
   { icon: Download, label: "Экспорт", path: "/exports", access: "chief" },
   { icon: Settings, label: "Telegram", path: "/telegram", access: "chief" },
 ];

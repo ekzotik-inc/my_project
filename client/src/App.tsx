@@ -12,6 +12,7 @@ import TeamsPage from "./pages/TeamsPage";
 import TelegramSettingsPage from "./pages/TelegramSettingsPage";
 import ActivitiesPage from "./pages/ActivitiesPage";
 import BroadcastsPage from "./pages/BroadcastsPage";
+import CommunicationRhythmPage from "./pages/CommunicationRhythmPage";
 import ExportsPage from "./pages/ExportsPage";
 import StatisticsPage from "./pages/StatisticsPage";
 
@@ -26,6 +27,7 @@ function PeriodsRoute() { return <AdminShell><PeriodsPage /></AdminShell>; }
 function TelegramRoute() { return <AdminShell><TelegramSettingsPage /></AdminShell>; }
 function ActivitiesRoute() { return <AdminShell><ActivitiesPage /></AdminShell>; }
 function BroadcastsRoute() { return <AdminShell><BroadcastsPage /></AdminShell>; }
+function CommunicationRhythmRoute() { return <AdminShell><CommunicationRhythmPage /></AdminShell>; }
 function ExportsRoute() { return <AdminShell><ExportsPage /></AdminShell>; }
 
 function Router() {
@@ -39,6 +41,7 @@ function Router() {
       <Route path={"/telegram"} component={TelegramRoute} />
       <Route path={"/activities"} component={ActivitiesRoute} />
       <Route path={"/broadcasts"} component={BroadcastsRoute} />
+      <Route path={"/communication"} component={CommunicationRhythmRoute} />
       <Route path={"/exports"} component={ExportsRoute} />
       <Route path={"/statistics"} component={StatisticsPage} />
       <Route path={"/404"} component={NotFound} />
