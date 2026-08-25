@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { storagePut } from "./storage";
 import * as telegramDb from "./telegramDb";
+import { createHash } from "node:crypto";
 
 type TelegramUser = { id: number; username?: string; first_name?: string; last_name?: string };
 type TelegramPhoto = { file_id: string; file_unique_id: string; file_size?: number; width: number; height: number };
@@ -26,6 +27,17 @@ function token() {
   const value = process.env.TELEGRAM_BOT_TOKEN;
   if (!value) throw new Error("TELEGRAM_BOT_TOKEN is not configured");
   return value;
+}
+
+export function getTelegramWebhookSecret(botToken: string, configuredSecret = process.env.TELEGRAM_WEBHOOK_SECRET) {
+  if (configuredSecret) {
+    if (!/^[A-Za-z0-9_-]{1,256}$/.test(configuredSecret)) {
+      throw new Error("TELEGRAM_WEBHOOK_SECRET may contain only letters, numbers, underscores, and hyphens");
+    }
+    return configuredSecret;
+  }
+
+  return createHash("sha256").update(botToken).digest("hex");
 }
 
 async function telegramApi<T>(method: string, payload: Record<string, unknown>): Promise<T> {
@@ -336,7 +348,7 @@ export async function syncTelegramIntegration(input: { webAppUrl: string | null;
   const appUrl = new URL(input.webAppUrl);
   if (appUrl.protocol !== "https:") throw new Error("Telegram requires an HTTPS address for the Mini App");
   const webhookUrl = new URL("/api/telegram/webhook", appUrl).toString();
-  const secretToken = process.env.TELEGRAM_WEBHOOK_SECRET || token();
+  const secretToken = getTelegramWebhookSecret(token());
   const statisticsUrl = new URL("/statistics", appUrl).toString();
   await telegramApi<boolean>("setChatMenuButton", {
     menu_button: { type: "web_app", text: input.menuButtonText, web_app: { url: statisticsUrl } },
@@ -351,7 +363,7 @@ export async function syncTelegramIntegration(input: { webAppUrl: string | null;
 
 export function registerTelegramWebhook(app: Express) {
   app.post("/api/telegram/webhook", async (req: Request, res: Response) => {
-    const configuredSecret = process.env.TELEGRAM_WEBHOOK_SECRET || token();
+    const configuredSecret = getTelegramWebhookSecret(token());
     if (configuredSecret && req.header("x-telegram-bot-api-secret-token") !== configuredSecret) {
       return res.status(401).json({ ok: false });
     }
