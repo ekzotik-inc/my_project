@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   formatParticipantHelp,
+  formatWelcomeGuide,
+  formatWelcomeMessage,
   getActivityNotificationPresentation,
   formatNewActivityNotification,
   formatNewPeriodNotification,
@@ -51,5 +53,12 @@ describe("Telegram communication templates", () => {
     const base = { periodTitle: "Неделя заботы", title: "Письмо добра", description: "Поддержите коллегу.", points: 20 };
     expect(getActivityNotificationPresentation({ ...base, coverImageUrl: "https://images.example/cover.jpg" }).photo).toBe("https://images.example/cover.jpg");
     expect(getActivityNotificationPresentation(base).photo).toBeNull();
+  });
+
+  it("creates a personal, action-oriented welcome without changing approval rules", () => {
+    const welcome = formatWelcomeMessage("Анна");
+    expect(welcome).toContain("*Рады видеть вас, Анна*");
+    expect(welcome).toContain("заметный общий вклад");
+    expect(formatWelcomeGuide()).toContain("баллы появляются только после решения P&C");
   });
 });

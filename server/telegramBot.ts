@@ -175,18 +175,43 @@ export function formatParticipantHelp() {
   return "*Добрые дела*\n────────────\n\n*Как работает ваш маршрут*\n\n• В /menu выберите дело, которое готовы сделать сейчас\n• Пройдите шаги и приложите результат\n• P&C посмотрит материалы и напишет решение\n• После подтверждения баллы и статистика обновятся сами\n\n_В каждом периоде у всех участников одинаковый набор заданий. Если нужен ориентир, обратитесь к команде P&C._";
 }
 
+export function formatWelcomeMessage(firstName?: string) {
+  const greeting = firstName?.trim() ? `, ${escapeMarkdown(firstName.trim())}` : "";
+  return `*Добрые дела*\n────────────\n\n*Рады видеть вас${greeting}*\n\nЗдесь простые действия команды превращаются в заметный общий вклад. Вы сможете выбрать доброе дело, пройти его в своём темпе и увидеть, как результат растёт вместе с командой.\n\n_Сначала коротко расскажу, как устроен маршрут._`;
+}
+
+export function formatWelcomeGuide() {
+  return "*Ваш маршрут в трёх шагах*\n────────────\n\n*1.* Оставьте короткий профиль — P&C подтвердит участие.\n*2.* Выбирайте задания, которые доступны всем в текущем периоде.\n*3.* Отправляйте результат: баллы появляются только после решения P&C.\n\n_Никакой гонки. Важен настоящий вклад и комфортный для вас темп._";
+}
+
+async function sendWelcome(chatId: string, firstName?: string) {
+  return sendRichMessage(chatId, formatWelcomeMessage(firstName), {
+    inline_keyboard: [
+      [{ text: "Как это работает", callback_data: "welcome:guide" }],
+      [{ text: "Присоединиться к команде", callback_data: "welcome:register" }],
+    ],
+  });
+}
+
+async function beginRegistration(telegramUserId: string, chatId: string) {
+  const existing = await telegramDb.getParticipantByTelegramId(telegramUserId);
+  if (existing?.status === "approved") return sendParticipantMenu(telegramUserId, chatId);
+  if (existing?.status === "pending") return sendRichMessage(chatId, "*Добрые дела*\n────────────\n\n*Заявка уже у P&C*\n\nДанные проверяются. Ничего дополнительно делать не нужно: я напишу сразу, когда откроется доступ к вашему маршруту.");
+  await telegramDb.upsertTelegramConversation({ telegramUserId, telegramChatId: chatId, state: "registration_phone" });
+  return sendRichMessage(chatId, "*Добрые дела*\n────────────\n\n*Начнём с контакта*\n\nЭто первый из трёх коротких шагов. Номер нужен только для заявки P&C и остаётся внутри команды.\n\n*1 из 3* · поделитесь номером телефона", {
+    keyboard: [[{ text: "Поделиться номером", request_contact: true }]],
+    resize_keyboard: true,
+    one_time_keyboard: true,
+  });
+}
+
 async function startRegistration(message: TelegramMessage) {
   if (!message.from) return;
   const userId = String(message.from.id);
   const existing = await telegramDb.getParticipantByTelegramId(userId);
   if (existing?.status === "approved") return sendParticipantMenu(userId, String(message.chat.id));
-  if (existing?.status === "pending") return sendRichMessage(message.chat.id, "*Добрые дела*\n────────────\n\n*Заявка уже у P&C*\n\nДанные проверяются. Ничего дополнительно делать не нужно: я напишу сразу, когда откроется доступ к вашему маршруту.");
-  await telegramDb.upsertTelegramConversation({ telegramUserId: userId, telegramChatId: String(message.chat.id), state: "registration_phone" });
-  return sendRichMessage(message.chat.id, "*Добрые дела*\n────────────\n\n*Добро пожаловать*\n\nСоберём короткий профиль, чтобы добавить вас в команду и открыть общий маршрут. Это займёт меньше минуты.\n\n*1 из 3* · поделитесь номером телефона", {
-    keyboard: [[{ text: "Поделиться номером", request_contact: true }]],
-    resize_keyboard: true,
-    one_time_keyboard: true,
-  });
+  if (existing?.status === "pending") return beginRegistration(userId, String(message.chat.id));
+  return sendWelcome(String(message.chat.id), message.from.first_name);
 }
 
 async function sendTeamChoice(telegramUserId: string, chatId: string, phone: string) {
@@ -351,6 +376,8 @@ async function handleCallback(callback: TelegramCallback) {
   const userId = String(callback.from.id);
   try {
     if (data === "menu:refresh") return sendParticipantMenu(userId, chatId);
+    if (data === "welcome:guide") return sendRichMessage(chatId, formatWelcomeGuide(), { inline_keyboard: [[{ text: "Присоединиться к команде", callback_data: "welcome:register" }]] });
+    if (data === "welcome:register") return beginRegistration(userId, chatId);
     if (data.startsWith("reg:team:")) {
       const conversation = await telegramDb.getTelegramConversation(userId);
       if (!conversation?.draftPhone || !conversation.draftFullName) throw new Error("Registration session expired");
