@@ -104,18 +104,39 @@ function statusMark(status: string) {
 }
 
 export function formatParticipantDashboard(dashboard: Awaited<ReturnType<typeof telegramDb.getParticipantActivityDashboard>>) {
-  if (!dashboard.period) return "*Добрые дела*\n────────────\n\n*Сейчас — спокойная пауза*\n\nКоманда P&C готовит следующий период. Когда маршрут откроется, я напишу вам и покажу первое дело.\n\n_Ничего делать не нужно — просто оставайтесь на связи._";
+  if (!dashboard.period) return "*Добрые дела*\n\n*Сейчас — спокойная пауза*\nКоманда P&C готовит следующий период. Когда появится первое дело, я напишу вам здесь.\n\n_Пока просто оставайтесь на связи._";
   const completed = dashboard.assignments.filter(item => item.status === "approved").length;
   const reviewing = dashboard.assignments.filter(item => item.status === "under_review").length;
   const available = dashboard.assignments.filter(item => item.status === "assigned" || item.status === "in_progress" || item.status === "rejected").length;
-  const lead = available > 0
-    ? "Выберите одно дело ниже — начните с того, которое проще вписать в сегодня."
+  const completion = dashboard.assignments.length ? Math.round((completed / dashboard.assignments.length) * 100) : 0;
+  const headline = available > 0
+    ? "Есть дело, которое ждёт вашего шага"
     : reviewing > 0
-      ? "Ваши материалы уже у P&C. Пока идёт проверка, можно поддержать коллег и заглянуть в статистику."
+      ? "Ваш результат уже у P&C"
       : completed > 0
-        ? "Все доступные дела закрыты. Спасибо — ваш вклад уже стал частью командного результата."
-        : "Новый ритм начинается с первого простого действия.";
-  return `*Добрые дела* · _${escapeMarkdown(dashboard.period.title)}_\n────────────\n\n*Ваш личный маршрут*\n\n*${dashboard.points} баллов*  ·  ${completed}/${dashboard.assignments.length} результатов подтверждено\n${available ? `${available} можно начать` : "Все доступные дела завершены"}  ·  ${reviewing ? `${reviewing} у P&C` : "нет материалов на проверке"}\n\n_${lead}_`;
+        ? "Все дела этого периода завершены"
+        : "Первое дело появится совсем скоро";
+  const detail = available > 0
+    ? `Сейчас доступно: *${available}*. Выберите то, которое легко вписать в ваш день.`
+    : reviewing > 0
+      ? "Материалы проверяются. Я напишу, как только P&C примет решение."
+      : completed > 0
+        ? "Спасибо за вклад. Он уже стал частью общего результата команды."
+        : "Как только P&C откроет задание, оно появится здесь.";
+  return `*${escapeMarkdown(dashboard.period.title)}*\n\n*${headline}*\n${detail}\n\nПрогресс периода: *${completed} из ${dashboard.assignments.length}* · ${completion}%\nВаш результат: *${dashboard.points} баллов*`;
+}
+
+export function formatReturningParticipantGreeting(input: { fullName?: string | null; dashboard: Awaited<ReturnType<typeof telegramDb.getParticipantActivityDashboard>> }) {
+  const firstName = input.fullName?.trim().split(/\s+/)[0];
+  const greeting = firstName ? `, ${escapeMarkdown(firstName)}` : "";
+  const reviewing = input.dashboard.assignments.filter(item => item.status === "under_review").length;
+  const available = input.dashboard.assignments.filter(item => item.status === "assigned" || item.status === "in_progress" || item.status === "rejected").length;
+  const status = reviewing > 0
+    ? "Ваш последний результат уже у P&C. Откройте маршрут, чтобы посмотреть статус."
+    : available > 0
+      ? "В маршруте есть доступное дело. Откройте его, когда будете готовы."
+      : "Откройте маршрут, чтобы увидеть актуальный статус периода.";
+  return `*С возвращением${greeting}*\n\n${status}`;
 }
 
 export function formatNewActivityNotification(input: { periodTitle: string; title: string; description: string; points: number }) {
@@ -166,9 +187,18 @@ async function sendParticipantMenu(telegramUserId: string, chatId: string) {
   const taskButtons: InlineButton[][] = dashboard.assignments
     .filter(item => item.status !== "approved" && item.status !== "under_review")
     .map(item => [{ text: `${statusMark(item.status)} ${item.title} · ${formatStatus(item.status)}`, callback_data: `task:${item.id}` }]);
-  const actionButtons: InlineButton[][] = [[{ text: "Обновить маршрут", callback_data: "menu:refresh" }]];
+  const actionButtons: InlineButton[][] = [[{ text: "Проверить статус", callback_data: "menu:refresh" }]];
   if (settings?.webAppUrl) actionButtons.unshift([{ text: settings.menuButtonText || "Посмотреть вклад", web_app: { url: settings.webAppUrl } }]);
   return sendRichMessage(chatId, formatParticipantDashboard(dashboard), { inline_keyboard: [...taskButtons, ...actionButtons] });
+}
+
+async function sendReturningParticipantGreeting(telegramUserId: string, chatId: string) {
+  const participant = await telegramDb.getParticipantByTelegramId(telegramUserId);
+  if (!participant || participant.status !== "approved") return sendParticipantMenu(telegramUserId, chatId);
+  const dashboard = await telegramDb.getParticipantActivityDashboard(participant.id);
+  return sendRichMessage(chatId, formatReturningParticipantGreeting({ fullName: participant.fullName, dashboard }), {
+    inline_keyboard: [[{ text: "Открыть мой маршрут", callback_data: "menu:refresh" }]],
+  });
 }
 
 export function formatParticipantHelp() {
@@ -209,7 +239,7 @@ async function startRegistration(message: TelegramMessage) {
   if (!message.from) return;
   const userId = String(message.from.id);
   const existing = await telegramDb.getParticipantByTelegramId(userId);
-  if (existing?.status === "approved") return sendParticipantMenu(userId, String(message.chat.id));
+  if (existing?.status === "approved") return sendReturningParticipantGreeting(userId, String(message.chat.id));
   if (existing?.status === "pending") return beginRegistration(userId, String(message.chat.id));
   return sendWelcome(String(message.chat.id), message.from.first_name);
 }
