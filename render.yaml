@@ -18,6 +18,8 @@ services:
         generateValue: true
       - key: DATABASE_URL
         sync: false
+      - key: DATABASE_SSL
+        value: true
       - key: TELEGRAM_BOT_TOKEN
         sync: false
       - key: CHIEF_ADMIN_PASSWORD
@@ -33,4 +35,4 @@ services:
       - key: STORAGE_SECRET_ACCESS_KEY
         sync: false
       - key: STORAGE_REGION
-        value: auto
+        value: ca-east-006
