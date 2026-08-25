@@ -28,6 +28,13 @@ describe("Telegram communication templates", () => {
     expect(message).toContain("подтверждено модератором");
   });
 
+  it("adds a newly unlocked achievement to the approval message", () => {
+    const message = formatReportApprovalNotification({ title: "Сбор вещей", points: 45, newAchievements: [{ icon: "🌱", title: "Первый добрый след", description: "Первое задание подтверждено P&C." }] });
+
+    expect(message).toContain("*Новое достижение*");
+    expect(message).toContain("*Первый добрый след*");
+  });
+
   it("formats an active period launch with a clear next step", () => {
     expect(formatNewPeriodNotification({ title: "Неделя заботы", description: "Делаем добро вместе." })).toContain(
       "*Старт нового периода*"

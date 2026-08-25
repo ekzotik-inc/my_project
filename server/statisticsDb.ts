@@ -1,6 +1,7 @@
 import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { activityAssignments, activityPeriods, activities, participants, pointLedger, teams } from "../drizzle/schema";
 import { getDb } from "./db";
+import { getParticipantAchievements } from "./achievementsDb";
 
 type ExperienceAssignment = { status: string; title: string };
 
@@ -32,7 +33,10 @@ export async function getMiniAppStatistics(telegramUserId: string) {
   if (!participant) throw new Error("Your participation is awaiting approval");
   const periodRows = await db.select().from(activityPeriods).where(eq(activityPeriods.status, "active")).limit(1);
   const period = periodRows[0] ?? null;
-  if (!period) return { participant: { fullName: participant.fullName, teamName: null, rank: null, totalParticipants: 0, teamRank: null }, period: null, personal: { points: 0, approved: 0, reviewing: 0, total: 0 }, nextAction: deriveNextAction([]), teams: [], topTeams: [], topParticipants: [], recentActions: [] };
+  if (!period) {
+    const achievements = await getParticipantAchievements({ participantId: participant.id, teamId: participant.teamId, periodId: null });
+    return { participant: { fullName: participant.fullName, teamName: null, rank: null, totalParticipants: 0, teamRank: null }, period: null, personal: { points: 0, approved: 0, reviewing: 0, total: 0 }, achievements, nextAction: deriveNextAction([]), teams: [], topTeams: [], topParticipants: [], recentActions: [] };
+  }
 
   const participantTeam = participant.teamId ? await db.select({ name: teams.name }).from(teams).where(eq(teams.id, participant.teamId)).limit(1) : [];
   const assignments = await db.select({ status: activityAssignments.status, title: activities.title }).from(activityAssignments).innerJoin(activities, eq(activityAssignments.activityId, activities.id)).where(and(eq(activityAssignments.participantId, participant.id), eq(activities.periodId, period.id)));
@@ -85,10 +89,12 @@ export async function getMiniAppStatistics(telegramUserId: string) {
     .where(and(eq(activities.periodId, period.id), inArray(activityAssignments.status, ["under_review", "approved", "rejected"])))
     .orderBy(desc(activityAssignments.updatedAt))
     .limit(20);
+  const achievements = await getParticipantAchievements({ participantId: participant.id, teamId: participant.teamId, periodId: period.id });
   return {
     participant: { fullName: participant.fullName, teamName: participantTeam[0]?.name ?? null, rank: participantRank, totalParticipants: Number(participantCount[0]?.total ?? 0), teamRank: teamRank || null },
     period: { title: period.title, startsAt: period.startsAt, endsAt: period.endsAt, taskCount: period.taskCount },
     personal: { points: Number(points[0]?.total ?? 0), approved: assignments.filter(item => item.status === "approved").length, reviewing: assignments.filter(item => item.status === "under_review").length, total: assignments.length },
+    achievements,
     nextAction: deriveNextAction(assignments),
     teams: teamRows,
     topTeams: teamRows.slice(0, 3),
