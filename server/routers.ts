@@ -94,7 +94,7 @@ export const appRouter = router({
         .input(z.object({ periodId: z.number().int().positive(), title: z.string().min(1).max(200), description: z.string().min(1).max(8000), points: z.number().int().min(0), coverImageKey: z.string().max(512).nullable().optional(), coverImageUrl: z.string().max(1024).nullable().optional(), steps: z.array(z.object({ instruction: z.string().min(1).max(4000), inputType: z.enum(["photo", "file", "text", "mixed"]), isRequired: z.boolean() })).min(1) }))
         .mutation(async ({ input }) => {
           const result = await activityAdminDb.createActivityAndAssignAll(input);
-          const notifiedCount = await notifyNewActivity({ periodTitle: result.period.title, title: result.activity.title, description: result.activity.description, points: result.activity.points });
+          const notifiedCount = await notifyNewActivity({ periodTitle: result.period.title, title: result.activity.title, description: result.activity.description, points: result.activity.points, coverImageUrl: result.activity.coverImageUrl });
           return { ...result, notifiedCount };
         }),
     }),

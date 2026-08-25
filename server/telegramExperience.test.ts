@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   formatParticipantHelp,
+  getActivityNotificationPresentation,
   formatNewActivityNotification,
   formatNewPeriodNotification,
   formatReportApprovalNotification,
@@ -15,34 +16,40 @@ describe("Telegram communication templates", () => {
       points: 30,
     });
 
-    expect(message).toContain("*Новое доброе дело для всей команды*");
+    expect(message).toContain("*Новое дело для всей команды*");
     expect(message).toContain("*Командный пикник*");
     expect(message).toContain("*+30 баллов*");
-    expect(message).toContain("Баллы появятся только после проверки");
+    expect(message).toContain("все шаги и материалы уже внутри");
   });
 
   it("celebrates an approved report without implying points are automatic", () => {
     const message = formatReportApprovalNotification({ title: "Сбор вещей", points: 45 });
 
-    expect(message).toContain("*Результат принят — спасибо!*");
+    expect(message).toContain("*Ваш вклад подтверждён*");
     expect(message).toContain("*+45 баллов*");
-    expect(message).toContain("P&C подтвердила");
+    expect(message).toContain("P&C приняла результат");
   });
 
   it("formats an active period launch with a clear next step", () => {
     expect(formatNewPeriodNotification({ title: "Неделя заботы", description: "Делаем добро вместе." })).toContain(
-      "*Начинаем новый период*"
+      "*Открыт новый период*"
     );
   });
 
   it("offers a concise participant help route without changing the approval rule", () => {
     const message = formatParticipantHelp();
-    expect(message).toContain("*Как устроены «Добрые дела»*");
-    expect(message).toContain("После подтверждения получите баллы");
+    expect(message).toContain("*Как работает ваш маршрут*");
+    expect(message).toContain("После подтверждения баллы и статистика обновятся сами");
     expect(message).toContain("одинаковый набор заданий");
   });
 
   it("keeps help readable with Telegram-safe bullet formatting", () => {
-    expect(formatParticipantHelp()).toContain("• Откройте *Мой ритм* через /menu");
+    expect(formatParticipantHelp()).toContain("• В /menu выберите дело");
+  });
+
+  it("uses an activity cover as Telegram photo preview and preserves a text fallback", () => {
+    const base = { periodTitle: "Неделя заботы", title: "Письмо добра", description: "Поддержите коллегу.", points: 20 };
+    expect(getActivityNotificationPresentation({ ...base, coverImageUrl: "https://images.example/cover.jpg" }).photo).toBe("https://images.example/cover.jpg");
+    expect(getActivityNotificationPresentation(base).photo).toBeNull();
   });
 });
