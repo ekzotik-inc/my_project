@@ -17,7 +17,7 @@ describe("buildDrizzleCredentials", () => {
       user: "app@user",
       password: "pa$$word",
       database: "corporate_good_deeds",
-      ssl: "require",
+      ssl: { rejectUnauthorized: true },
     });
   });
 

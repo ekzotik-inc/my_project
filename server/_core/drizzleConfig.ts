@@ -21,6 +21,6 @@ export function buildDrizzleCredentials(databaseUrl: string, useTls: boolean) {
     user: decodeURIComponent(parsed.username),
     password: decodeURIComponent(parsed.password),
     database,
-    ssl: "require",
+    ssl: { rejectUnauthorized: true },
   };
 }
