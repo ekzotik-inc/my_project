@@ -19,10 +19,9 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
 import { CalendarRange, CheckSquare2, Download, LayoutDashboard, LogOut, PanelLeft, Send, Settings, Users, UsersRound } from "lucide-react";
-import { CSSProperties, useEffect, useRef, useState } from "react";
+import { CSSProperties, FormEvent, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
@@ -52,7 +51,10 @@ export default function DashboardLayout({
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
-  const { loading, user } = useAuth();
+  const { loading, user, login } = useAuth();
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState<"admin" | "pc_admin">("admin");
+  const [loginError, setLoginError] = useState("");
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
@@ -62,10 +64,17 @@ export default function DashboardLayout({
     return <DashboardLayoutSkeleton />
   }
 
+  async function signIn(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoginError("");
+    try { await login(role, password); setPassword(""); }
+    catch { setLoginError("Не удалось войти: проверьте выбранную роль и пароль."); }
+  }
+
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
+        <form onSubmit={signIn} className="flex flex-col items-center gap-6 p-8 max-w-md w-full">
           <div className="flex flex-col items-center gap-6">
             <h1 className="text-2xl font-semibold tracking-tight text-center">
               Войдите в панель управления
@@ -74,14 +83,11 @@ export default function DashboardLayout({
               Доступ к управлению доступен только авторизованным сотрудникам P&amp;C и администраторам.
             </p>
           </div>
-          <Button
-            onClick={() => startLogin()}
-            size="lg"
-            className="w-full shadow-lg hover:shadow-xl transition-all"
-          >
-            Войти
-          </Button>
-        </div>
+          <div className="w-full"><p className="mb-2 text-xs font-bold">Роль</p><div className="grid grid-cols-2 gap-2"><Button type="button" variant={role === "admin" ? "default" : "outline"} onClick={() => setRole("admin")}>Chief</Button><Button type="button" variant={role === "pc_admin" ? "default" : "outline"} onClick={() => setRole("pc_admin")}>P&amp;C</Button></div></div>
+          <input type="password" value={password} onChange={event => setPassword(event.target.value)} className="h-11 w-full rounded-xl border border-black/10 bg-white px-3 text-sm" placeholder="Пароль" autoComplete="current-password" required />
+          {loginError && <p className="w-full text-sm text-destructive">{loginError}</p>}
+          <Button type="submit" size="lg" className="w-full shadow-lg hover:shadow-xl transition-all">Войти</Button>
+        </form>
       </div>
     );
   }

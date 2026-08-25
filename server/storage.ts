@@ -2,7 +2,28 @@
 // Uploads via Forge Server presigned URL to S3 (PUT direct).
 // Downloads return /manus-storage/{key} paths served via 307 redirect.
 
+import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { ENV } from "./_core/env";
+
+let externalClient: S3Client | null = null;
+
+function useExternalStorage() {
+  return Boolean(ENV.storageEndpoint && ENV.storageBucket && ENV.storageAccessKeyId && ENV.storageSecretAccessKey);
+}
+
+function getExternalClient() {
+  if (!useExternalStorage()) throw new Error("External storage is not configured");
+  if (!externalClient) {
+    externalClient = new S3Client({
+      endpoint: ENV.storageEndpoint,
+      region: ENV.storageRegion,
+      forcePathStyle: true,
+      credentials: { accessKeyId: ENV.storageAccessKeyId, secretAccessKey: ENV.storageSecretAccessKey },
+    });
+  }
+  return externalClient;
+}
 
 function getForgeConfig() {
   const forgeUrl = ENV.forgeApiUrl;
@@ -33,8 +54,17 @@ export async function storagePut(
   data: Buffer | Uint8Array | string,
   contentType = "application/octet-stream",
 ): Promise<{ key: string; url: string }> {
-  const { forgeUrl, forgeKey } = getForgeConfig();
   const key = appendHashSuffix(normalizeKey(relKey));
+  if (useExternalStorage()) {
+    await getExternalClient().send(new PutObjectCommand({
+      Bucket: ENV.storageBucket,
+      Key: key,
+      Body: data,
+      ContentType: contentType,
+    }));
+    return { key, url: `/manus-storage/${key}` };
+  }
+  const { forgeUrl, forgeKey } = getForgeConfig();
 
   // 1. Get presigned PUT URL from Forge
   const presignUrl = new URL("v1/storage/presign/put", forgeUrl + "/");
@@ -77,8 +107,11 @@ export async function storageGet(relKey: string): Promise<{ key: string; url: st
 }
 
 export async function storageGetSignedUrl(relKey: string): Promise<string> {
-  const { forgeUrl, forgeKey } = getForgeConfig();
   const key = normalizeKey(relKey);
+  if (useExternalStorage()) {
+    return getSignedUrl(getExternalClient(), new GetObjectCommand({ Bucket: ENV.storageBucket, Key: key }), { expiresIn: 60 * 10 });
+  }
+  const { forgeUrl, forgeKey } = getForgeConfig();
 
   const getUrl = new URL("v1/storage/presign/get", forgeUrl + "/");
   getUrl.searchParams.set("path", key);

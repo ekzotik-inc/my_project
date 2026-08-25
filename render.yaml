@@ -1,0 +1,36 @@
+services:
+  - type: web
+    runtime: node
+    name: corporate-good-deeds
+    repo: https://github.com/ekzotik-inc/my_project
+    branch: main
+    plan: free
+    region: frankfurt
+    buildCommand: pnpm install --frozen-lockfile && pnpm build
+    preDeployCommand: pnpm drizzle-kit migrate
+    startCommand: pnpm start
+    healthCheckPath: /
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: CHIEF_ADMIN_PASSWORD
+        sync: false
+      - key: PC_ADMIN_PASSWORD
+        sync: false
+      - key: STORAGE_ENDPOINT
+        sync: false
+      - key: STORAGE_BUCKET
+        sync: false
+      - key: STORAGE_ACCESS_KEY_ID
+        sync: false
+      - key: STORAGE_SECRET_ACCESS_KEY
+        sync: false
+      - key: STORAGE_REGION
+        value: auto

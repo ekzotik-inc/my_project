@@ -3,7 +3,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 
 export function AdminAccessNotice() {
   const { loading, user } = useAuth();
-  if (loading || user?.role === "admin") return null;
+  if (loading || user?.role === "admin" || user?.role === "pc_admin") return null;
 
   return (
     <section className="mx-auto mt-24 max-w-xl rounded-[1.75rem] border border-black/5 bg-card p-10 text-center shadow-[0_18px_50px_-30px_rgba(0,0,0,0.22)]">

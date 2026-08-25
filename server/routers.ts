@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { COOKIE_NAME } from "../shared/const";
+import { TRPCError } from "@trpc/server";
 import * as db from "./db";
 import * as telegramDb from "./telegramDb";
 import * as activityAdminDb from "./activityAdminDb";
@@ -10,6 +11,7 @@ import { createCurrentDataExport } from "./excelExport";
 import { verifyTelegramMiniAppInitData } from "./telegramMiniApp";
 import { getMiniAppStatistics } from "./statisticsDb";
 import { getSessionCookieOptions } from "./_core/cookies";
+import { createLocalAdminSession, localAdminUser, verifyAdminPassword } from "./_core/localAuth";
 import { systemRouter } from "./_core/systemRouter";
 import { chiefProcedure, moderationProcedure, publicProcedure, router } from "./_core/trpc";
 
@@ -18,6 +20,16 @@ export const appRouter = router({
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
+    login: publicProcedure
+      .input(z.object({ role: z.enum(["admin", "pc_admin"]), password: z.string().min(1).max(1024) }))
+      .mutation(async ({ input, ctx }) => {
+        if (!verifyAdminPassword(input.role, input.password)) {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Неверный пароль" });
+        }
+        const session = await createLocalAdminSession(input.role);
+        ctx.res.cookie(COOKIE_NAME, session, { ...getSessionCookieOptions(ctx.req), maxAge: 365 * 24 * 60 * 60 * 1000 });
+        return localAdminUser(input.role);
+      }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
