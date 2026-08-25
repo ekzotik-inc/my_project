@@ -1,7 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { storagePut } from "./storage";
 import * as telegramDb from "./telegramDb";
-import { findNewAchievements } from "./achievementRules";
 import { createHash } from "node:crypto";
 
 type TelegramUser = { id: number; username?: string; first_name?: string; last_name?: string };
@@ -111,11 +110,8 @@ export function formatNewPeriodNotification(input: { title: string; description?
   return `🌱 *Старт нового периода*\n\n*${escapeMarkdown(input.title)}*${description}\n\nСовсем скоро здесь появятся задания для всей команды. Следите за обновлениями — вместе сделаем больше добра.`;
 }
 
-export function formatReportApprovalNotification(input: { title: string; points: number; newAchievements?: { icon: string; title: string; description: string }[] }) {
-  const achievementBlock = input.newAchievements?.length
-    ? `\n\n*Новое достижение*\n${input.newAchievements.map(item => `${item.icon} *${escapeMarkdown(item.title)}* — ${escapeMarkdown(item.description)}`).join("\n")}`
-    : "";
-  return `🎉 *Ваш результат принят!*\n\nЗадание *${escapeMarkdown(input.title)}* подтверждено модератором.\n🏅 *Начислено:* +${input.points} баллов${achievementBlock}\n\nСпасибо за участие — ваш вклад уже влияет на общий результат команды.`;
+export function formatReportApprovalNotification(input: { title: string; points: number }) {
+  return `🎉 *Ваш результат принят!*\n\nЗадание *${escapeMarkdown(input.title)}* подтверждено модератором.\n🏅 *Начислено:* +${input.points} баллов\n\nСпасибо за участие — ваш вклад уже влияет на общий результат команды.`;
 }
 
 async function notifyApprovedParticipants(text: string, replyMarkup?: ReplyMarkup) {
@@ -367,8 +363,7 @@ async function handleCallback(callback: TelegramCallback) {
         return sendMessage(chatId, "Введите комментарий для участника следующим сообщением.");
       }
       const result = await telegramDb.moderateReport({ assignmentId, moderatorTelegramId: userId, decision: "approved" });
-      const newAchievements = findNewAchievements(result.achievementsBefore, result.achievementsAfter);
-      await sendRichMessage(result.report.participantChatId, formatReportApprovalNotification({ title: result.report.activityTitle, points: result.awardedPoints, newAchievements }));
+      await sendRichMessage(result.report.participantChatId, formatReportApprovalNotification({ title: result.report.activityTitle, points: result.awardedPoints }));
       await notifyModerators(`🎉 *Отчёт ${escapeMarkdown(result.report.activityTitle)} подтверждён.* Начислено +${result.awardedPoints} баллов.`, userId);
       return sendRichMessage(chatId, `🎉 *Результат подтверждён!*\nУчастнику начислено: *+${result.awardedPoints} баллов*.`);
     }

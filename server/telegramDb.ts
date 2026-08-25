@@ -13,7 +13,6 @@ import {
   teams,
 } from "../drizzle/schema";
 import { getDb } from "./db";
-import { getParticipantAchievements } from "./achievementsDb";
 
 async function requireDb() {
   const db = await getDb();
@@ -311,14 +310,11 @@ export async function moderateReport(input: { assignmentId: number; moderatorTel
 
   if (input.decision === "rejected") {
     await db.update(activityAssignments).set({ status: "rejected", awardedPoints: 0, reviewedAt: new Date(), reviewedByParticipantId: moderator.id, moderationComment: comment }).where(eq(activityAssignments.id, input.assignmentId));
-    return { report, awardedPoints: 0, achievementsBefore: [], achievementsAfter: [] };
+    return { report, awardedPoints: 0 };
   }
-  const participant = await getParticipantById(report.participantId);
-  const achievementsBefore = await getParticipantAchievements({ participantId: report.participantId, teamId: participant?.teamId ?? null, periodId: periods[0].id });
   await db.transaction(async tx => {
     await tx.update(activityAssignments).set({ status: "approved", awardedPoints: report.activityPoints, reviewedAt: new Date(), reviewedByParticipantId: moderator.id, moderationComment: comment }).where(eq(activityAssignments.id, input.assignmentId));
     await tx.insert(pointLedger).values({ participantId: report.participantId, assignmentId: input.assignmentId, periodId: periods[0].id, points: report.activityPoints, eventType: "report_approved", note: comment, createdByParticipantId: moderator.id });
   });
-  const achievementsAfter = await getParticipantAchievements({ participantId: report.participantId, teamId: participant?.teamId ?? null, periodId: periods[0].id });
-  return { report, awardedPoints: report.activityPoints, achievementsBefore, achievementsAfter };
+  return { report, awardedPoints: report.activityPoints };
 }

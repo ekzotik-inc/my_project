@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, sql } from "drizzle-orm";
+import { asc, count, desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2";
 import {
@@ -218,41 +218,19 @@ export async function getAdminOverview() {
 
 export async function getCommunicationDigest() {
   const db = await requireDb();
-  const [pendingRegistrations, reportsAwaitingReview, participantsReady, assignmentsWaiting, activePeriodRows, participantsWithFirstBadge] = await Promise.all([
+  const [pendingRegistrations, reportsAwaitingReview, participantsReady, assignmentsWaiting, activePeriodRows] = await Promise.all([
     db.select({ value: count() }).from(participants).where(eq(participants.status, "pending")),
     db.select({ value: count() }).from(activityAssignments).where(eq(activityAssignments.status, "under_review")),
     db.select({ value: count() }).from(participants).where(eq(participants.status, "approved")),
     db.select({ value: count() }).from(activityAssignments).where(eq(activityAssignments.status, "assigned")),
-    db.select({ id: activityPeriods.id, title: activityPeriods.title, endsAt: activityPeriods.endsAt, taskCount: activityPeriods.taskCount }).from(activityPeriods).where(eq(activityPeriods.status, "active")).limit(1),
-    db.select({ value: sql<number>`count(distinct ${activityAssignments.participantId})` }).from(activityAssignments).innerJoin(participants, eq(activityAssignments.participantId, participants.id)).where(and(eq(activityAssignments.status, "approved"), eq(participants.status, "approved"))),
+    db.select({ title: activityPeriods.title, endsAt: activityPeriods.endsAt, taskCount: activityPeriods.taskCount }).from(activityPeriods).where(eq(activityPeriods.status, "active")).limit(1),
   ]);
-  const activePeriod = activePeriodRows[0] ?? null;
-  const teamProgress = activePeriod
-    ? await db
-        .select({ name: teams.name, completed: count() })
-        .from(teams)
-        .innerJoin(participants, and(eq(participants.teamId, teams.id), eq(participants.status, "approved")))
-        .innerJoin(activityAssignments, and(eq(activityAssignments.participantId, participants.id), eq(activityAssignments.status, "approved")))
-        .innerJoin(activities, and(eq(activities.id, activityAssignments.activityId), eq(activities.periodId, activePeriod.id)))
-        .where(eq(teams.isActive, true))
-        .groupBy(teams.id, teams.name)
-        .orderBy(desc(count()), asc(teams.name))
-        .limit(1)
-    : [];
-  const approvedParticipants = Number(participantsReady[0]?.value ?? 0);
-  const firstBadgeOwners = Number(participantsWithFirstBadge[0]?.value ?? 0);
-  const leadingTeam = teamProgress[0] ? { name: teamProgress[0].name, completed: Number(teamProgress[0].completed), target: 5 } : null;
 
   return {
     pendingRegistrations: Number(pendingRegistrations[0]?.value ?? 0),
     reportsAwaitingReview: Number(reportsAwaitingReview[0]?.value ?? 0),
-    approvedParticipants,
+    approvedParticipants: Number(participantsReady[0]?.value ?? 0),
     assignmentsWaiting: Number(assignmentsWaiting[0]?.value ?? 0),
-    activePeriod: activePeriod ? { title: activePeriod.title, endsAt: activePeriod.endsAt, taskCount: activePeriod.taskCount } : null,
-    achievements: {
-      participantsWithFirstBadge: firstBadgeOwners,
-      participantsWithoutFirstBadge: Math.max(approvedParticipants - firstBadgeOwners, 0),
-      leadingTeam,
-    },
+    activePeriod: activePeriodRows[0] ? { title: activePeriodRows[0].title, endsAt: activePeriodRows[0].endsAt, taskCount: activePeriodRows[0].taskCount } : null,
   };
 }
