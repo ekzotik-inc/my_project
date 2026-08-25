@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatParticipantHelp,
   formatNewActivityNotification,
   formatNewPeriodNotification,
   formatReportApprovalNotification,
@@ -14,23 +15,30 @@ describe("Telegram communication templates", () => {
       points: 30,
     });
 
-    expect(message).toContain("*Новое доброе дело уже ждёт вас!*");
+    expect(message).toContain("*Новое доброе дело для всей команды*");
     expect(message).toContain("*Командный пикник*");
-    expect(message).toContain("*Награда:* +30 баллов");
-    expect(message).toContain("кнопку «Открыть задания»");
+    expect(message).toContain("*+30 баллов*");
+    expect(message).toContain("Баллы появятся только после проверки");
   });
 
   it("celebrates an approved report without implying points are automatic", () => {
     const message = formatReportApprovalNotification({ title: "Сбор вещей", points: 45 });
 
-    expect(message).toContain("*Ваш результат принят!*");
-    expect(message).toContain("*Начислено:* +45 баллов");
-    expect(message).toContain("подтверждено модератором");
+    expect(message).toContain("*Результат принят — спасибо!*");
+    expect(message).toContain("*+45 баллов*");
+    expect(message).toContain("P&C подтвердила");
   });
 
   it("formats an active period launch with a clear next step", () => {
     expect(formatNewPeriodNotification({ title: "Неделя заботы", description: "Делаем добро вместе." })).toContain(
-      "*Старт нового периода*"
+      "*Начинаем новый период*"
     );
+  });
+
+  it("offers a concise participant help route without changing the approval rule", () => {
+    const message = formatParticipantHelp();
+    expect(message).toContain("*Как устроены «Добрые дела»*");
+    expect(message).toContain("После подтверждения получите баллы");
+    expect(message).toContain("одинаковый набор заданий");
   });
 });

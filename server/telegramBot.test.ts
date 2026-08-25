@@ -13,13 +13,14 @@ describe("Telegram participant dashboard", () => {
       points: 40,
     } as never);
 
-    expect(message).toContain("🏅 Баллы: *40*");
-    expect(message).toContain("✨ Доступно: *1*");
-    expect(message).toContain("🔎 На проверке: *1*");
-    expect(message).toContain("✅ Подтверждено: *1 из 3*");
+    expect(message).toContain("*Ваш ритм добрых дел*");
+    expect(message).toContain("🏅 *40* баллов");
+    expect(message).toContain("○ *1* доступно");
+    expect(message).toContain("◌ *1* на проверке");
+    expect(message).toContain("✅ *1/3* принято");
   });
 
   it("explains when no activity period is active", () => {
-    expect(formatParticipantDashboard({ period: null, assignments: [], points: 0 } as never)).toContain("нет активного периода");
+    expect(formatParticipantDashboard({ period: null, assignments: [], points: 0 } as never)).toContain("нового периода ещё нет");
   });
 });

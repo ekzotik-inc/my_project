@@ -25,6 +25,7 @@ import { CSSProperties, FormEvent, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
+import { VisibleDeedMark } from "./VisibleDeedMark";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Обзор", path: "/", access: "chief" },
@@ -78,8 +79,9 @@ export default function DashboardLayout({
         <div className="float-slow absolute -left-24 top-12 h-64 w-64 rounded-full bg-[#D8EDBF] blur-3xl" />
         <div className="absolute -right-20 bottom-0 h-80 w-80 rounded-[5rem] bg-[#BDE1EF] opacity-80 blur-3xl" />
         <form onSubmit={signIn} className="relative w-full max-w-md rounded-[2rem] border border-white/70 bg-white/85 p-7 shadow-[0_30px_80px_-40px_rgba(31,73,48,0.45)] backdrop-blur sm:p-9">
-          <div className="flex items-start justify-between gap-4"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#163F2F] text-white shadow-lg"><HeartHandshake className="h-5 w-5" /></div><span className="rounded-full bg-[#E8F3EE] px-3 py-1.5 text-[10px] font-extrabold tracking-[0.14em] text-[#25613F]">ДОБРЫЕ ДЕЛА</span></div>
-          <div className="mt-7"><p className="text-xs font-bold uppercase tracking-[0.15em] text-[#55705E]">пространство команды</p><h1 className="mt-2 text-3xl font-extrabold tracking-[-0.055em] text-[#163F2F]">Управляйте добром, которое видно</h1><p className="mt-3 text-sm leading-6 text-muted-foreground">Создавайте общие активности, поддерживайте участников и отмечайте каждый подтверждённый результат.</p></div>
+          <div className="flex items-start justify-between gap-4"><VisibleDeedMark /><span className="rounded-full bg-[#E8F3EE] px-3 py-1.5 text-[10px] font-extrabold tracking-[0.14em] text-[#25613F]">ДОБРЫЕ ДЕЛА</span></div>
+          <div className="mt-7"><p className="text-xs font-bold uppercase tracking-[0.15em] text-[#55705E]">пространство команды</p><h1 className="mt-2 text-3xl font-extrabold tracking-[-0.055em] text-[#163F2F]">Управляйте вкладом, который становится видимым</h1><p className="mt-3 text-sm leading-6 text-muted-foreground">Общий ритм начинается с одного доброго действия, а признание приходит после честной проверки P&amp;C.</p></div>
+          <div className="mt-6 grid grid-cols-3 gap-2 text-center text-[10px] font-extrabold uppercase tracking-[0.09em] text-[#55705E]"><span className="rounded-xl bg-[#F4F8F1] px-2 py-2">Создать</span><span className="rounded-xl bg-[#F4F8F1] px-2 py-2">Подтвердить</span><span className="rounded-xl bg-[#F4F8F1] px-2 py-2">Признать</span></div>
           <div className="mt-7 w-full"><p className="mb-2 text-xs font-extrabold uppercase tracking-[0.12em] text-[#55705E]">Ваша роль</p><div className="grid grid-cols-2 gap-2"><Button type="button" variant={role === "admin" ? "default" : "outline"} className="soft-press rounded-xl" onClick={() => setRole("admin")}>Chief</Button><Button type="button" variant={role === "pc_admin" ? "default" : "outline"} className="soft-press rounded-xl" onClick={() => setRole("pc_admin")}>P&amp;C</Button></div></div>
           <input type="password" value={password} onChange={event => setPassword(event.target.value)} className="mt-4 h-12 w-full rounded-xl border border-[#BFD7C5] bg-white px-4 text-sm shadow-inner" placeholder="Пароль" autoComplete="current-password" required />
           {loginError && <p className="mt-3 w-full text-sm text-destructive">{loginError}</p>}
@@ -178,7 +180,7 @@ function DashboardLayoutContent({
               </button>
               {!isCollapsed ? (
                 <div className="flex min-w-0 items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#163F2F] text-white"><HeartHandshake className="h-3.5 w-3.5" /></div>
+                  <VisibleDeedMark className="h-7 w-7 rounded-lg [&_svg:first-child]:h-3.5 [&_svg:first-child]:w-3.5" />
                   <span className="truncate text-xs font-extrabold tracking-[0.12em] text-[#163F2F]">ДОБРЫЕ ДЕЛА</span>
                 </div>
               ) : null}
