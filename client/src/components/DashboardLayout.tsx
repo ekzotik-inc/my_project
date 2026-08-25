@@ -33,7 +33,7 @@ const menuItems = [
   { icon: CalendarRange, label: "Периоды", path: "/periods", access: "chief" },
   { icon: CheckSquare2, label: "Активности", path: "/activities", access: "chief" },
   { icon: Send, label: "Рассылки", path: "/broadcasts", access: "chief" },
-  { icon: MessageCircleHeart, label: "Ритм общения", path: "/communication", access: "chief" },
+  { icon: MessageCircleHeart, label: "Ритм общения", path: "/communication", access: "moderator" },
   { icon: Download, label: "Экспорт", path: "/exports", access: "chief" },
   { icon: Settings, label: "Telegram", path: "/telegram", access: "chief" },
 ];

@@ -215,3 +215,22 @@ export async function getAdminOverview() {
     reportsAwaitingReview: reviewTotal[0]?.value ?? 0,
   };
 }
+
+export async function getCommunicationDigest() {
+  const db = await requireDb();
+  const [pendingRegistrations, reportsAwaitingReview, participantsReady, assignmentsWaiting, activePeriodRows] = await Promise.all([
+    db.select({ value: count() }).from(participants).where(eq(participants.status, "pending")),
+    db.select({ value: count() }).from(activityAssignments).where(eq(activityAssignments.status, "under_review")),
+    db.select({ value: count() }).from(participants).where(eq(participants.status, "approved")),
+    db.select({ value: count() }).from(activityAssignments).where(eq(activityAssignments.status, "assigned")),
+    db.select({ title: activityPeriods.title, endsAt: activityPeriods.endsAt, taskCount: activityPeriods.taskCount }).from(activityPeriods).where(eq(activityPeriods.status, "active")).limit(1),
+  ]);
+
+  return {
+    pendingRegistrations: Number(pendingRegistrations[0]?.value ?? 0),
+    reportsAwaitingReview: Number(reportsAwaitingReview[0]?.value ?? 0),
+    approvedParticipants: Number(participantsReady[0]?.value ?? 0),
+    assignmentsWaiting: Number(assignmentsWaiting[0]?.value ?? 0),
+    activePeriod: activePeriodRows[0] ? { title: activePeriodRows[0].title, endsAt: activePeriodRows[0].endsAt, taskCount: activePeriodRows[0].taskCount } : null,
+  };
+}

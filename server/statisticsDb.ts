@@ -14,6 +14,11 @@ export function deriveNextAction(assignments: ExperienceAssignment[]) {
   return { tone: "celebrate" as const, title: "Все задания периода подтверждены", body: "Спасибо за вклад — ваш результат уже усилил командный зачёт." };
 }
 
+export function getParticipantRank(participantId: number, leaderboard: Array<{ id: number }>) {
+  const position = leaderboard.findIndex(item => item.id === participantId);
+  return position >= 0 ? position + 1 : null;
+}
+
 async function requireDb() {
   const db = await getDb();
   if (!db) throw new Error("Database is not available");
@@ -54,7 +59,7 @@ export async function getMiniAppStatistics(telegramUserId: string) {
     .groupBy(teams.id);
   const completionByTeam = new Map(teamCompletions.map(row => [row.id, Number(row.completed)]));
   const teamRows = teamPoints.map(team => ({ ...team, points: Number(team.points), completed: completionByTeam.get(team.id) ?? 0 }));
-  const topParticipants = await db
+  const participantLeaderboard = await db
     .select({
       id: participants.id,
       fullName: participants.fullName,
@@ -66,10 +71,9 @@ export async function getMiniAppStatistics(telegramUserId: string) {
     .leftJoin(pointLedger, and(eq(pointLedger.participantId, participants.id), eq(pointLedger.periodId, period.id)))
     .where(eq(participants.status, "approved"))
     .groupBy(participants.id, participants.fullName, teams.name)
-    .orderBy(desc(sql`coalesce(sum(${pointLedger.points}), 0)`), asc(participants.fullName))
-    .limit(10);
-  const leaderboardRows = topParticipants.map(item => ({ ...item, points: Number(item.points) }));
-  const participantRank = leaderboardRows.findIndex(item => item.id === participant.id) + 1;
+    .orderBy(desc(sql`coalesce(sum(${pointLedger.points}), 0)`), asc(participants.fullName));
+  const leaderboardRows = participantLeaderboard.map(item => ({ ...item, points: Number(item.points) }));
+  const participantRank = getParticipantRank(participant.id, leaderboardRows);
   const teamRank = participant.teamId ? teamRows.findIndex(team => team.id === participant.teamId) + 1 : 0;
   const participantCount = await db.select({ total: count() }).from(participants).where(eq(participants.status, "approved"));
   const recentActions = await db
@@ -82,13 +86,13 @@ export async function getMiniAppStatistics(telegramUserId: string) {
     .orderBy(desc(activityAssignments.updatedAt))
     .limit(20);
   return {
-    participant: { fullName: participant.fullName, teamName: participantTeam[0]?.name ?? null, rank: participantRank || null, totalParticipants: Number(participantCount[0]?.total ?? 0), teamRank: teamRank || null },
+    participant: { fullName: participant.fullName, teamName: participantTeam[0]?.name ?? null, rank: participantRank, totalParticipants: Number(participantCount[0]?.total ?? 0), teamRank: teamRank || null },
     period: { title: period.title, startsAt: period.startsAt, endsAt: period.endsAt, taskCount: period.taskCount },
     personal: { points: Number(points[0]?.total ?? 0), approved: assignments.filter(item => item.status === "approved").length, reviewing: assignments.filter(item => item.status === "under_review").length, total: assignments.length },
     nextAction: deriveNextAction(assignments),
     teams: teamRows,
     topTeams: teamRows.slice(0, 3),
-    topParticipants: leaderboardRows,
+    topParticipants: leaderboardRows.slice(0, 10),
     recentActions,
   };
 }

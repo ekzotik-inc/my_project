@@ -47,6 +47,7 @@ export const appRouter = router({
 
   admin: router({
     overview: chiefProcedure.query(() => db.getAdminOverview()),
+    communicationDigest: moderationProcedure.query(() => db.getCommunicationDigest()),
     teams: router({
       list: chiefProcedure.query(() => db.listTeams()),
       create: chiefProcedure
