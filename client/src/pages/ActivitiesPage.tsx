@@ -33,7 +33,7 @@ export default function ActivitiesPage() {
     onSuccess: async result => {
       setTitle(""); setDescription(""); setPoints("20"); setSteps([blankStep(), blankStep(), blankStep()]); setImage(null);
       await Promise.all([utils.admin.activities.list.invalidate(), utils.admin.periods.list.invalidate(), utils.admin.overview.invalidate()]);
-      toast.success(`Задание опубликовано для ${result.assignedCount} участников`);
+      toast.success(`Задание опубликовано для ${result.assignedCount} участников. Уведомления доставлены: ${result.notifiedCount}.`);
     },
     onError: error => toast.error(error.message),
   });

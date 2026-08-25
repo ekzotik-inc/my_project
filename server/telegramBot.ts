@@ -51,13 +51,22 @@ async function telegramApi<T>(method: string, payload: Record<string, unknown>):
   return body.result as T;
 }
 
-async function sendMessage(chatId: string | number, text: string, replyMarkup?: ReplyMarkup) {
+async function sendMessage(chatId: string | number, text: string, replyMarkup?: ReplyMarkup, parseMode?: "Markdown") {
   return telegramApi<{ message_id: number }>("sendMessage", {
     chat_id: String(chatId),
     text,
     reply_markup: replyMarkup,
+    ...(parseMode ? { parse_mode: parseMode } : {}),
     disable_web_page_preview: true,
   });
+}
+
+async function sendRichMessage(chatId: string | number, text: string, replyMarkup?: ReplyMarkup) {
+  return sendMessage(chatId, text, replyMarkup, "Markdown");
+}
+
+function escapeMarkdown(value: string) {
+  return value.replace(/([_*`\[])/g, "\\$1");
 }
 
 async function answerCallback(callbackId: string, text?: string) {
@@ -85,11 +94,38 @@ function formatStatus(status: string) {
 }
 
 export function formatParticipantDashboard(dashboard: Awaited<ReturnType<typeof telegramDb.getParticipantActivityDashboard>>) {
-  if (!dashboard.period) return "Сейчас нет активного периода. Когда команда P&C запустит новую неделю добрых дел, задания появятся здесь.";
+  if (!dashboard.period) return "🌱 *Сейчас нет активного периода*\n\nКак только команда P&C запустит новый цикл добрых дел, задания появятся здесь. Загляните чуть позже!";
   const completed = dashboard.assignments.filter(item => item.status === "approved").length;
   const reviewing = dashboard.assignments.filter(item => item.status === "under_review").length;
   const available = dashboard.assignments.filter(item => item.status === "assigned" || item.status === "in_progress" || item.status === "rejected").length;
-  return `«${dashboard.period.title}»\n\nВаши баллы: ${dashboard.points}\nДоступно: ${available}\nНа проверке: ${reviewing}\nПодтверждено: ${completed} из ${dashboard.assignments.length}`;
+  return `🌿 *${escapeMarkdown(dashboard.period.title)}*\n\n*Ваш личный прогресс*\n🏅 Баллы: *${dashboard.points}*\n✨ Доступно: *${available}*\n🔎 На проверке: *${reviewing}*\n✅ Подтверждено: *${completed} из ${dashboard.assignments.length}*\n\nВыберите задание ниже или обновите показатели, чтобы увидеть свежий статус.`;
+}
+
+export function formatNewActivityNotification(input: { periodTitle: string; title: string; description: string; points: number }) {
+  return `✨ *Новое доброе дело уже ждёт вас!*\n\n*${escapeMarkdown(input.periodTitle)}*\n\n🎯 *${escapeMarkdown(input.title)}*\n${escapeMarkdown(input.description)}\n\n🏅 *Награда:* +${input.points} баллов\n\nОткройте кнопку «Открыть задания», выберите активность и двигайтесь по шагам. Баллы появятся после проверки результата.`;
+}
+
+export function formatNewPeriodNotification(input: { title: string; description?: string }) {
+  const description = input.description?.trim() ? `\n${escapeMarkdown(input.description.trim())}` : "";
+  return `🌱 *Старт нового периода*\n\n*${escapeMarkdown(input.title)}*${description}\n\nСовсем скоро здесь появятся задания для всей команды. Следите за обновлениями — вместе сделаем больше добра.`;
+}
+
+export function formatReportApprovalNotification(input: { title: string; points: number }) {
+  return `🎉 *Ваш результат принят!*\n\nЗадание *${escapeMarkdown(input.title)}* подтверждено модератором.\n🏅 *Начислено:* +${input.points} баллов\n\nСпасибо за участие — ваш вклад уже влияет на общий результат команды.`;
+}
+
+async function notifyApprovedParticipants(text: string, replyMarkup?: ReplyMarkup) {
+  const recipients = await telegramDb.listApprovedParticipantChats();
+  const delivery = await Promise.allSettled(recipients.map(recipient => sendRichMessage(recipient.telegramChatId, text, replyMarkup)));
+  return delivery.filter(result => result.status === "fulfilled").length;
+}
+
+export async function notifyNewActivity(input: { periodTitle: string; title: string; description: string; points: number }) {
+  return notifyApprovedParticipants(formatNewActivityNotification(input), { inline_keyboard: [[{ text: "Открыть задания", callback_data: "menu:refresh" }]] });
+}
+
+export async function notifyNewPeriod(input: { title: string; description?: string }) {
+  return notifyApprovedParticipants(formatNewPeriodNotification(input), { inline_keyboard: [[{ text: "Открыть меню", callback_data: "menu:refresh" }]] });
 }
 
 async function sendParticipantMenu(telegramUserId: string, chatId: string) {
@@ -104,7 +140,7 @@ async function sendParticipantMenu(telegramUserId: string, chatId: string) {
     .map(item => [{ text: `${item.title} · ${formatStatus(item.status)}`, callback_data: `task:${item.id}` }]);
   const actionButtons: InlineButton[][] = [[{ text: "Обновить показатели", callback_data: "menu:refresh" }]];
   if (settings?.webAppUrl) actionButtons.unshift([{ text: settings.menuButtonText || "Статистика", web_app: { url: settings.webAppUrl } }]);
-  return sendMessage(chatId, formatParticipantDashboard(dashboard), { inline_keyboard: [...taskButtons, ...actionButtons] });
+  return sendRichMessage(chatId, formatParticipantDashboard(dashboard), { inline_keyboard: [...taskButtons, ...actionButtons] });
 }
 
 async function startRegistration(message: TelegramMessage) {
@@ -112,9 +148,9 @@ async function startRegistration(message: TelegramMessage) {
   const userId = String(message.from.id);
   const existing = await telegramDb.getParticipantByTelegramId(userId);
   if (existing?.status === "approved") return sendParticipantMenu(userId, String(message.chat.id));
-  if (existing?.status === "pending") return sendMessage(message.chat.id, "Ваша заявка уже ожидает решения администратора.");
+  if (existing?.status === "pending") return sendRichMessage(message.chat.id, "⏳ *Ваша заявка уже на модерации*\n\nКоманда P&C проверяет данные. Мы обязательно напишем, когда доступ будет открыт.");
   await telegramDb.upsertTelegramConversation({ telegramUserId: userId, telegramChatId: String(message.chat.id), state: "registration_phone" });
-  return sendMessage(message.chat.id, "Добро пожаловать в «Добрые дела». Для регистрации поделитесь номером телефона.", {
+  return sendRichMessage(message.chat.id, "🌿 *Добро пожаловать в «Добрые дела»!*\n\nЧтобы мы могли добавить вас в команду, поделитесь номером телефона. Это займёт меньше минуты.", {
     keyboard: [[{ text: "Поделиться номером", request_contact: true }]],
     resize_keyboard: true,
     one_time_keyboard: true,
@@ -123,9 +159,9 @@ async function startRegistration(message: TelegramMessage) {
 
 async function sendTeamChoice(telegramUserId: string, chatId: string, phone: string) {
   const teams = await telegramDb.listActiveTeamsForTelegram();
-  if (teams.length === 0) return sendMessage(chatId, "Регистрация временно недоступна: администратор ещё не добавил команды.");
+  if (teams.length === 0) return sendRichMessage(chatId, "🌱 *Регистрация почти готова*\n\nСейчас администратор добавляет команды. Мы откроем выбор команды совсем скоро — попробуйте чуть позже.");
   await telegramDb.upsertTelegramConversation({ telegramUserId, telegramChatId: chatId, state: "registration_name", draftPhone: phone });
-  return sendMessage(chatId, "Спасибо. Теперь укажите имя и фамилию одним сообщением.", { remove_keyboard: true });
+  return sendRichMessage(chatId, "Спасибо! ✨\n\nТеперь напишите *имя и фамилию* одним сообщением — так коллеги смогут узнать вас в общей истории добрых дел.", { remove_keyboard: true });
 }
 
 async function promptForReportStep(telegramUserId: string, chatId: string, assignmentId: number, stepOrder: number) {
@@ -136,11 +172,11 @@ async function promptForReportStep(telegramUserId: string, chatId: string, assig
   const step = assignment.steps.find(item => item.stepOrder === stepOrder);
   if (!step) {
     await telegramDb.clearTelegramConversation(telegramUserId);
-    return sendMessage(chatId, "Все шаги заполнены. Отправьте отчёт на проверку.", { inline_keyboard: [[{ text: "Отправить на проверку", callback_data: `report:submit:${assignmentId}` }]] });
+    return sendRichMessage(chatId, "🎯 *Все шаги заполнены!*\n\nПроверьте материалы и отправьте результат на модерацию. Баллы будут начислены только после подтверждения.", { inline_keyboard: [[{ text: "Отправить на проверку", callback_data: `report:submit:${assignmentId}` }]] });
   }
   await telegramDb.upsertTelegramConversation({ telegramUserId, telegramChatId: chatId, state: "report_step", assignmentId, stepOrder });
   const inputHint = step.inputType === "text" ? "Отправьте текстовый ответ." : step.inputType === "photo" ? "Отправьте фотографию." : step.inputType === "file" ? "Отправьте файл или фото документа." : "Отправьте текст, фото или файл.";
-  return sendMessage(chatId, `Шаг ${step.stepOrder}. ${step.instruction}\n\n${inputHint}`);
+  return sendRichMessage(chatId, `🧩 *Шаг ${step.stepOrder}*\n${escapeMarkdown(step.instruction)}\n\n_${inputHint}_`);
 }
 
 async function downloadTelegramFile(fileId: string) {
@@ -161,7 +197,7 @@ async function sendRegistrationModerationRequest(participantId: number) {
   const settings = await telegramDb.getTelegramSettings();
   const participant = await telegramDb.getParticipantById(participantId);
   if (!settings?.registrationModerationChatId || !participant) return;
-  await sendMessage(settings.registrationModerationChatId, `Новая заявка\n\n${participant.fullName || "Без имени"}\nКоманда: ${participant.teamId || "не выбрана"}\nТелефон: ${participant.phone || "не указан"}\nTelegram: ${participant.telegramUsername ? `@${participant.telegramUsername}` : participant.telegramUserId}`, {
+  await sendRichMessage(settings.registrationModerationChatId, `🆕 *Новая заявка на регистрацию*\n\n*Участник:* ${escapeMarkdown(participant.fullName || "Без имени")}\n*Команда:* ${participant.teamId || "не выбрана"}\n*Телефон:* ${escapeMarkdown(participant.phone || "не указан")}\n*Telegram:* ${participant.telegramUsername ? `@${escapeMarkdown(participant.telegramUsername)}` : participant.telegramUserId}\n\nПроверьте данные и примите решение.`, {
     inline_keyboard: [[{ text: "Принять", callback_data: `reg:approve:${participant.id}` }, { text: "Отклонить", callback_data: `reg:reject:${participant.id}` }]],
   });
 }
@@ -171,7 +207,7 @@ async function notifyModerators(text: string, excludeTelegramUserId?: string) {
   await Promise.allSettled(
     moderators
       .filter(moderator => moderator.telegramUserId !== excludeTelegramUserId)
-      .map(moderator => sendMessage(moderator.telegramChatId, text))
+      .map(moderator => sendRichMessage(moderator.telegramChatId, text))
   );
 }
 
@@ -182,13 +218,13 @@ export async function notifyRegistrationDecision(input: {
   moderatorTelegramUserId?: string;
 }) {
   if (input.status === "approved") {
-    await sendMessage(input.participant.telegramChatId, "Заявка одобрена. Добро пожаловать в «Добрые дела»!");
-    await notifyModerators(`Заявка ${input.participant.fullName || "участника"} одобрена.`, input.moderatorTelegramUserId);
+    await sendRichMessage(input.participant.telegramChatId, "🎉 *Ваша заявка одобрена!*\n\nДобро пожаловать в «Добрые дела». Откройте меню — там появятся ваш личный прогресс, задания и командная статистика.");
+    await notifyModerators(`✅ *Заявка ${escapeMarkdown(input.participant.fullName || "участника")} одобрена.*`, input.moderatorTelegramUserId);
     return;
   }
   const reason = input.reason?.trim() || "Пожалуйста, уточните данные и отправьте заявку снова.";
-  await sendMessage(input.participant.telegramChatId, `Ваша заявка пока не принята.\n\nКомментарий модератора: ${reason}\n\nИспользуйте /start, чтобы подать обновлённые данные.`);
-  await notifyModerators(`Заявка ${input.participant.fullName || "участника"} отклонена с комментарием.`, input.moderatorTelegramUserId);
+  await sendRichMessage(input.participant.telegramChatId, `🛠 *Заявка ждёт уточнения*\n\n*Комментарий P&C:* ${escapeMarkdown(reason)}\n\nИспользуйте /start, чтобы обновить данные и отправить заявку ещё раз.`);
+  await notifyModerators(`🛠 *Заявка ${escapeMarkdown(input.participant.fullName || "участника")} возвращена на уточнение.*`, input.moderatorTelegramUserId);
 }
 
 async function sendReportToModeration(assignmentId: number) {
@@ -196,17 +232,17 @@ async function sendReportToModeration(assignmentId: number) {
   if (!settings?.reportModerationChatId) return;
   const report = await telegramDb.getReportForModeration(assignmentId);
   if (!report) return;
-  await sendMessage(settings.reportModerationChatId, `Отчёт на проверке\n\n${report.activityTitle} · ${report.activityPoints} баллов\nУчастник: ${report.participantName || "Без имени"}\nКоманда: ${report.participantTeam || "не выбрана"}`);
+  await sendRichMessage(settings.reportModerationChatId, `🔎 *Отчёт ждёт проверки*\n\n*Задание:* ${escapeMarkdown(report.activityTitle)}\n*Награда после подтверждения:* +${report.activityPoints} баллов\n*Участник:* ${escapeMarkdown(report.participantName || "Без имени")}\n*Команда:* ${escapeMarkdown(report.participantTeam || "не выбрана")}\n\nПроверьте материалы и примите решение.`);
   const evidence = await telegramDb.getReportEvidence(assignmentId);
   for (const item of evidence) {
     const caption = `Шаг ${item.stepOrder}: ${item.instruction}${item.textResponse ? `\nОтвет: ${item.textResponse}` : ""}`;
     if (item.telegramFileId) {
       if (item.attachmentKind === "photo") await sendPhoto(settings.reportModerationChatId, item.telegramFileId, caption);
       else await sendDocument(settings.reportModerationChatId, item.telegramFileId, caption);
-    } else if (item.textResponse) await sendMessage(settings.reportModerationChatId, caption);
+    } else if (item.textResponse) await sendRichMessage(settings.reportModerationChatId, `🧩 *Шаг ${item.stepOrder}*\n${escapeMarkdown(caption)}`);
   }
-  await sendMessage(settings.reportModerationChatId, "Примите решение по отчёту.", { inline_keyboard: [[{ text: "Подтвердить и начислить", callback_data: `report:approve:${assignmentId}` }, { text: "Отклонить", callback_data: `report:reject:${assignmentId}` }]] });
-  await notifyModerators(`Новый отчёт ожидает проверки: «${report.activityTitle}» от ${report.participantName || "участника"}.`);
+  await sendRichMessage(settings.reportModerationChatId, "*Решение по отчёту*\nПодтверждение начислит баллы участнику; отклонение попросит его доработать материалы.", { inline_keyboard: [[{ text: "Подтвердить и начислить", callback_data: `report:approve:${assignmentId}` }, { text: "Отклонить", callback_data: `report:reject:${assignmentId}` }]] });
+  await notifyModerators(`🔎 *Новый отчёт ожидает проверки:* ${escapeMarkdown(report.activityTitle)} от ${escapeMarkdown(report.participantName || "участника")}.`);
 }
 
 async function handleRegistrationConversation(message: TelegramMessage, conversation: NonNullable<Awaited<ReturnType<typeof telegramDb.getTelegramConversation>>>) {
@@ -250,9 +286,9 @@ async function handleModeratorText(message: TelegramMessage, conversation: NonNu
   if (conversation.state === "moderation_reject_report") {
     const result = await telegramDb.moderateReport({ assignmentId: conversation.assignmentId, moderatorTelegramId: moderatorId, decision: "rejected", comment: message.text.trim() });
     await telegramDb.clearTelegramConversation(moderatorId);
-    await sendMessage(result.report.participantChatId, `Отчёт по заданию «${result.report.activityTitle}» возвращён на доработку.\n\nКомментарий модератора: ${message.text.trim()}`);
-    await notifyModerators(`Отчёт «${result.report.activityTitle}» отклонён и возвращён на доработку.`, moderatorId);
-    return sendMessage(message.chat.id, "Отчёт отклонён, участник получил комментарий.");
+    await sendRichMessage(result.report.participantChatId, `🛠 *Отчёт ждёт доработки*\n\nЗадание *${escapeMarkdown(result.report.activityTitle)}* ещё не прошло проверку.\n\n*Комментарий P&C:* ${escapeMarkdown(message.text.trim())}\n\nОткройте задание в меню, дополните материалы и отправьте результат повторно.`);
+    await notifyModerators(`🛠 *Отчёт ${escapeMarkdown(result.report.activityTitle)} возвращён на доработку.*`, moderatorId);
+    return sendRichMessage(message.chat.id, "🛠 Участник получил комментарий и может доработать результат.");
   }
   if (conversation.state === "moderation_reject_registration") {
     const participant = await telegramDb.moderateParticipantFromAdmin({ participantId: conversation.assignmentId, status: "rejected", role: "participant", rejectionReason: message.text.trim() });
@@ -289,14 +325,14 @@ async function handleCallback(callback: TelegramCallback) {
       if (registration.alreadyApproved) return sendParticipantMenu(userId, chatId);
       await sendRegistrationModerationRequest(registration.participant.id);
       await notifyModerators(`Новая заявка на регистрацию: ${registration.participant.fullName || "участник"}.`);
-      return sendMessage(chatId, "Спасибо. Ваша заявка отправлена на модерацию. Мы напишем, когда доступ будет открыт.");
+      return sendRichMessage(chatId, "✨ *Заявка отправлена!*\n\nСпасибо — P&C уже получила ваши данные. Мы обязательно напишем, когда откроем доступ к заданиям и статистике.");
     }
     if (data.startsWith("task:")) {
       const participant = await telegramDb.getParticipantByTelegramId(userId);
       if (!participant || participant.status !== "approved") throw new Error("Approval is required");
       const assignmentId = Number(data.split(":")[1]);
       const assignment = await telegramDb.beginActivityReport(assignmentId, participant.id);
-      await sendMessage(chatId, `Задание: ${assignment.title}\n\n${assignment.description}\n\nБаллы начисляются только после проверки.`);
+      await sendRichMessage(chatId, `🎯 *${escapeMarkdown(assignment.title)}*\n\n${escapeMarkdown(assignment.description)}\n\n🏅 *Потенциальная награда:* +${assignment.points} баллов\n_Баллы начисляются только после проверки результата._`);
       return promptForReportStep(userId, chatId, assignment.id, 1);
     }
     if (data.startsWith("report:submit:")) {
@@ -305,7 +341,7 @@ async function handleCallback(callback: TelegramCallback) {
       const assignmentId = Number(data.split(":")[2]);
       await telegramDb.submitActivityReport(assignmentId, participant.id);
       await sendReportToModeration(assignmentId);
-      return sendMessage(chatId, "Отчёт отправлен на проверку. Баллы появятся только после подтверждения модератором.");
+      return sendRichMessage(chatId, "📨 *Отчёт отправлен на проверку!*\n\nP&C уже получила материалы. Как только результат подтвердят, мы напишем вам и начислим баллы.");
     }
     if (data.startsWith("reg:approve:") || data.startsWith("reg:reject:")) {
       if (!(await telegramDb.isTelegramModerator(userId))) throw new Error("Moderator permissions are required");
@@ -327,9 +363,9 @@ async function handleCallback(callback: TelegramCallback) {
         return sendMessage(chatId, "Введите комментарий для участника следующим сообщением.");
       }
       const result = await telegramDb.moderateReport({ assignmentId, moderatorTelegramId: userId, decision: "approved" });
-      await sendMessage(result.report.participantChatId, `Отчёт по заданию «${result.report.activityTitle}» подтверждён. Начислено баллов: ${result.awardedPoints}.`);
-      await notifyModerators(`Отчёт «${result.report.activityTitle}» подтверждён. Начислено ${result.awardedPoints} баллов.`, userId);
-      return sendMessage(chatId, `Отчёт подтверждён. Начислено: ${result.awardedPoints} баллов.`);
+      await sendRichMessage(result.report.participantChatId, formatReportApprovalNotification({ title: result.report.activityTitle, points: result.awardedPoints }));
+      await notifyModerators(`🎉 *Отчёт ${escapeMarkdown(result.report.activityTitle)} подтверждён.* Начислено +${result.awardedPoints} баллов.`, userId);
+      return sendRichMessage(chatId, `🎉 *Результат подтверждён!*\nУчастнику начислено: *+${result.awardedPoints} баллов*.`);
     }
   } catch (error) {
     await sendMessage(chatId, error instanceof Error ? error.message : "Не удалось выполнить действие.");

@@ -26,14 +26,14 @@ export default function AdminOverview() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-8 px-1 py-4 sm:px-5 sm:py-7">
-      <section className="relative overflow-hidden rounded-[2rem] bg-[#111111] px-6 py-9 text-white shadow-[0_28px_70px_-42px_rgba(0,0,0,0.62)] sm:px-10 sm:py-11">
-        <div className="absolute -right-10 -top-16 h-52 w-52 rounded-full bg-[#BFDDF1] opacity-90" />
-        <div className="absolute -bottom-20 right-32 h-44 w-44 rotate-12 rounded-[2.5rem] bg-[#F3BFCB]" />
+      <section className="relative overflow-hidden rounded-[2rem] bg-[#163F2F] px-6 py-9 text-white shadow-[0_28px_70px_-42px_rgba(20,62,45,0.68)] sm:px-10 sm:py-11">
+        <div className="float-slow absolute -right-10 -top-16 h-52 w-52 rounded-full bg-[#C6E5AA] opacity-90" />
+        <div className="absolute -bottom-20 right-32 h-44 w-44 rotate-12 rounded-[2.5rem] bg-[#F4B7A9]" />
         <div className="relative max-w-2xl">
           <Badge className="border-0 bg-white/12 px-3 py-1 text-[11px] font-semibold text-white hover:bg-white/12">ПАНЕЛЬ КОМАНДЫ P&amp;C</Badge>
-          <h1 className="mt-5 max-w-xl text-4xl font-extrabold leading-[0.98] tracking-[-0.055em] sm:text-5xl">Добрые дела — в одном ритме</h1>
+          <h1 className="mt-5 max-w-xl text-4xl font-extrabold leading-[0.98] tracking-[-0.055em] sm:text-5xl">Каждое действие может стать добрым делом</h1>
           <p className="mt-5 max-w-lg text-sm leading-6 text-white/68 sm:text-base">
-            Настраивайте недельный период, создавайте задания и контролируйте модерацию без автоматического начисления баллов.
+            Запускайте общие циклы, создавайте задания и поддерживайте участников в моменте. Баллы появляются только после честной проверки результата.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button onClick={() => setLocation("/periods")} className="rounded-xl bg-white px-5 font-bold text-black hover:bg-white/90">
@@ -74,10 +74,11 @@ export default function AdminOverview() {
           </p>
           <Button variant="outline" onClick={() => setLocation("/periods")} className="mt-6 rounded-xl border-black/10 bg-transparent font-bold hover:bg-[#F4F6F7]">Настроить период <ArrowRight className="ml-2 h-4 w-4" /></Button>
         </article>
-        <article className="rounded-[1.65rem] bg-[#E8F3EE] p-6 sm:p-7">
+          <article className="rounded-[1.65rem] bg-[#FBE8D9] p-6 sm:p-7">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/75"><Send className="h-4 w-4" /></div>
-          <h2 className="mt-5 text-xl font-extrabold tracking-[-0.04em]">Рассылки будут здесь</h2>
-          <p className="mt-2 text-sm leading-6 text-[#486050]">Конструктор текста, изображения, Markdown, кнопок и сегментов будет добавлен следующим этапом.</p>
+          <h2 className="mt-5 text-xl font-extrabold tracking-[-0.04em]">Поддерживайте темп команды</h2>
+          <p className="mt-2 text-sm leading-6 text-[#70523F]">Отправляйте живые сообщения с Markdown, изображениями и кнопками. Используйте рассылки для приглашений, напоминаний и благодарностей.</p>
+          <Button onClick={() => setLocation("/broadcasts")} className="soft-press mt-6 rounded-xl bg-[#163F2F] font-bold text-white hover:bg-[#215640]">Создать сообщение <Send className="ml-2 h-4 w-4" /></Button>
         </article>
       </section>
     </div>

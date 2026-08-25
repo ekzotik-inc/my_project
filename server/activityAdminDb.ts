@@ -79,5 +79,5 @@ export async function createActivityAndAssignAll(input: {
   const approvedParticipants = await db.select({ id: participants.id }).from(participants).where(eq(participants.status, "approved"));
   if (approvedParticipants.length > 0) await db.insert(activityAssignments).values(approvedParticipants.map(participant => ({ activityId: activity.id, participantId: participant.id })));
   await db.update(activityPeriods).set({ taskCount: (currentCount[0]?.value ?? 0) + 1 }).where(eq(activityPeriods.id, input.periodId));
-  return { activity, assignedCount: approvedParticipants.length };
+  return { activity, period: period[0], assignedCount: approvedParticipants.length };
 }

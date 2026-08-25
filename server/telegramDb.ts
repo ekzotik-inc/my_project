@@ -37,6 +37,14 @@ export async function listActiveTeamsForTelegram() {
   return db.select().from(teams).where(eq(teams.isActive, true)).orderBy(asc(teams.name));
 }
 
+export async function listApprovedParticipantChats() {
+  const db = await requireDb();
+  return db
+    .select({ telegramChatId: participants.telegramChatId })
+    .from(participants)
+    .where(eq(participants.status, "approved"));
+}
+
 export async function getTelegramSettings() {
   const db = await requireDb();
   const rows = await db.select().from(telegramSettings).where(eq(telegramSettings.key, "primary")).limit(1);
