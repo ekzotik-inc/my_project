@@ -41,3 +41,4 @@
 - [x] Реализовать парольную авторизацию Chief/P&C Administrator для внешнего Render-развёртывания.
 - [ ] Подключить TiDB Cloud Starter и Backblaze B2 к Render через защищённые `DATABASE_*` и `STORAGE_*` переменные.
 - [ ] Проверить в production TLS-подключение TiDB и загрузку, хранение и выдачу файлов Backblaze B2.
+- [ ] Перенести запуск миграций из неподдерживаемого Render Free pre-deploy шага в безопасный production-старт приложения.
