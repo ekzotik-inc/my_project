@@ -12,6 +12,7 @@ import { createCurrentDataExport } from "./excelExport";
 import { verifyTelegramMiniAppInitData } from "./telegramMiniApp";
 import { getTelegramMiniAppWorkspaceRole } from "./telegramMiniAppAccess";
 import { getMiniAppStatistics } from "./statisticsDb";
+import { getApprovedGalleryFeed } from "./galleryReadModel";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { createLocalAdminSession, createTelegramAdminSession, localAdminUser, verifyAdminPassword } from "./_core/localAuth";
 import { systemRouter } from "./_core/systemRouter";
@@ -55,6 +56,14 @@ export const appRouter = router({
       const user = verifyTelegramMiniAppInitData(input.initData);
       return getMiniAppStatistics(String(user.id));
     }),
+  }),
+  gallery: router({
+    feed: publicProcedure
+      .input(z.object({ initData: z.string().min(1), cursor: z.number().int().positive().optional(), limit: z.number().int().min(6).max(24).default(12) }))
+      .query(({ input }) => {
+        const user = verifyTelegramMiniAppInitData(input.initData);
+        return getApprovedGalleryFeed({ viewerTelegramUserId: String(user.id), cursor: input.cursor, limit: input.limit });
+      }),
   }),
   miniApp: router({
     access: publicProcedure.input(z.object({ initData: z.string().min(1) })).query(async ({ input }) => {

@@ -16,6 +16,7 @@ import CommunicationRhythmPage from "./pages/CommunicationRhythmPage";
 import ExportsPage from "./pages/ExportsPage";
 import ReviewCenterPage from "./pages/ReviewCenterPage";
 import StatisticsPage from "./pages/StatisticsPage";
+import GalleryPage from "./pages/GalleryPage";
 import MiniAppGatewayPage from "./pages/MiniAppGatewayPage";
 import { useAuth } from "./_core/hooks/useAuth";
 
@@ -49,6 +50,7 @@ function Router() {
       <Route path={"/exports"} component={ExportsRoute} />
       <Route path={"/review"} component={ReviewCenterRoute} />
       <Route path={"/statistics"} component={StatisticsPage} />
+      <Route path={"/gallery"} component={GalleryPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

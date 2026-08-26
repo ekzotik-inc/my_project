@@ -156,6 +156,20 @@
   .achievement-category[data-state="open"] .achievement-grid { animation: achievement-grid-in 260ms cubic-bezier(0.23, 1, 0.32, 1) both; }
   .achievement-category[data-state="open"] .achievement-badge-card { animation: achievement-badge-in 300ms cubic-bezier(0.23, 1, 0.32, 1) both; animation-delay: calc(var(--achievement-stagger) * 38ms); }
   .achievement-detail-sheet[data-state="open"] { animation: achievement-sheet-in 260ms cubic-bezier(0.23, 1, 0.32, 1) both; }
+  .gallery-entry-card { position: relative; background: linear-gradient(135deg, #17233D, #3158C9); box-shadow: 0 20px 45px -32px rgb(23 35 61 / 76%); }
+  .gallery-entry-orb { position: absolute; right: -2.25rem; top: -2.5rem; width: 9rem; height: 9rem; border-radius: 999px; background: radial-gradient(circle at 34% 34%, rgb(221 247 93 / 94%), rgb(103 150 255 / 46%) 42%, transparent 68%); }
+  .gallery-surface { border: 1px solid rgb(49 108 255 / 13%); background: linear-gradient(145deg, #FFFFFF, #F4F6FF); box-shadow: 0 22px 48px -38px rgb(49 108 255 / 50%); }
+  .gallery-counter { border: 1px solid #DCE4FF; border-radius: 999px; background: #EEF2FF; color: #3158C9; padding: .4rem .62rem; font-size: .66rem; font-weight: 800; }
+  .gallery-stack-viewport { isolation: isolate; cursor: grab; }
+  .gallery-stack-viewport:active { cursor: grabbing; }
+  .gallery-stack-card { height: calc(100% - 1.75rem); background: #DCE4FF; box-shadow: 0 22px 38px -26px rgb(23 35 61 / 76%); transition: transform 280ms cubic-bezier(0.23, 1, 0.32, 1), opacity 220ms cubic-bezier(0.23, 1, 0.32, 1); will-change: transform, opacity; }
+  .gallery-stack-card img { pointer-events: none; user-select: none; }
+  .gallery-photo-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgb(13 20 38 / 5%) 34%, rgb(13 20 38 / 76%) 100%); pointer-events: none; }
+  .gallery-nav-button { display: inline-flex; min-height: 2.8rem; align-items: center; justify-content: center; gap: .32rem; border: 1px solid #DDE3F0; border-radius: .9rem; background: #FFFFFF; color: #536078; padding: .65rem .78rem; font-size: .73rem; font-weight: 800; transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), background-color 180ms cubic-bezier(0.23, 1, 0.32, 1), color 180ms cubic-bezier(0.23, 1, 0.32, 1); }
+  .gallery-nav-button:active { transform: scale(.97); }
+  .gallery-nav-button:disabled { opacity: .38; }
+  .gallery-nav-button-primary { border-color: #316CFF; background: #316CFF; color: #FFFFFF; }
+  .gallery-lightbox[data-state="open"] { animation: achievement-sheet-in 260ms cubic-bezier(0.23, 1, 0.32, 1) both; }
   .achievement-ring { background: conic-gradient(#316CFF var(--achievement-progress), #E8ECF8 0); }
   .bg-\[\#163F2F\] { background-color: #182035 !important; }
   .text-\[\#163F2F\] { color: #182035 !important; }
