@@ -143,6 +143,11 @@ export async function getReviewCenterDashboard() {
       proofsAttached: queue.reduce((sum, row) => sum + row.attachmentCount, 0),
       participantsInQueue: new Set(queue.map(row => row.participantId)).size,
     },
+    recognition: {
+      contributorsWithConfirmedResult: participantRows.filter(row => Number(row.approvedCount) > 0).length,
+      participantsCloseToFirstResult: participantRows.filter(row => Number(row.assignedCount) > 0 && Number(row.approvedCount) === 0).length,
+      periodFinishers: participantRows.filter(row => Number(row.assignedCount) > 0 && Number(row.approvedCount) >= Number(row.assignedCount)).length,
+    },
     queue,
     teams: teamRows.map(row => ({
       ...row,
