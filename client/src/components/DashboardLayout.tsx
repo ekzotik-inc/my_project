@@ -263,23 +263,19 @@ function DashboardLayoutContent({
         />
       </div>
 
-      <SidebarInset>
+      <SidebarInset className="bg-[radial-gradient(circle_at_95%_0%,rgba(199,229,170,0.28),transparent_22rem),radial-gradient(circle_at_3%_16%,rgba(211,235,246,0.32),transparent_24rem)]">
         {isMobile && (
-          <div className="flex h-14 items-center justify-between border-b bg-background/95 px-2 pt-[var(--tg-safe-top)] backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
+          <div className="sticky top-0 z-40 flex min-h-16 items-center justify-between border-b border-[#E1EADF] bg-[#F9FCF7]/92 px-3 pt-[var(--tg-safe-top)] backdrop-blur supports-[backdrop-filter]:backdrop-blur">
             <div className="flex items-center gap-2">
-              <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" />
-              <div className="flex items-center gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="tracking-tight text-foreground">
-                    {activeMenuItem?.label ?? "Меню"}
-                  </span>
-                </div>
-              </div>
+              <SidebarTrigger className="h-10 w-10 rounded-xl border border-[#E3ECE1] bg-white shadow-sm" />
+              <VisibleDeedMark className="h-9 w-9 rounded-xl [&_svg:first-child]:h-4 [&_svg:first-child]:w-4" />
+              <div className="flex flex-col"><span className="text-[9px] font-extrabold tracking-[0.13em] text-[#6A8170]">{user?.role === "admin" ? "CHIEF SPACE" : "P&C SPACE"}</span><span className="text-sm font-extrabold tracking-[-0.025em] text-[#163F2F]">{activeMenuItem?.label ?? "Меню"}</span></div>
             </div>
+            {awaitingReview > 0 ? <button onClick={() => setLocation("/review")} className="soft-press rounded-xl bg-[#FFF0F0] px-3 py-2 text-xs font-extrabold text-[#A6444B]">{awaitingReview} ждут</button> : null}
           </div>
         )}
-        <main className={`flex-1 p-4 sm:p-5 ${isMobile ? "pb-[calc(6.5rem+var(--tg-safe-bottom))]" : ""}`}>{children}</main>
-        {isMobile ? <nav className="fixed inset-x-3 bottom-[calc(0.65rem+var(--tg-safe-bottom))] z-50 flex items-center rounded-[1.35rem] border border-white/75 bg-white/95 p-1.5 shadow-[0_20px_45px_-26px_rgba(22,63,47,0.5)] backdrop-blur" aria-label="Быстрые действия">
+        <main className={`flex-1 p-4 sm:p-5 ${isMobile ? "pb-[calc(6.5rem+var(--tg-safe-bottom))]" : ""}`}><div key={location} className="route-enter h-full">{children}</div></main>
+        {isMobile ? <nav className="fixed inset-x-3 bottom-[calc(0.65rem+var(--tg-safe-bottom))] z-50 flex items-center rounded-[1.45rem] border border-white/90 bg-white/[0.94] p-1.5 shadow-[0_22px_48px_-26px_rgba(22,63,47,0.52)] backdrop-blur" aria-label="Быстрые действия">
           {mobileQuickItems.map(item => {
             const active = location === item.path;
             return <button key={item.path} onClick={() => { telegramSelectionHaptic(); setLocation(item.path); }} className={`soft-press relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[10px] font-extrabold ${active ? "bg-[#163F2F] text-white" : "text-[#587065]"}`}><item.icon className="h-4 w-4" />{item.label}{item.badge && awaitingReview > 0 ? <span className="absolute right-[17%] top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-[#C9474F] px-1 py-0.5 text-[8px] font-extrabold leading-none text-white">{awaitingReview > 99 ? "99+" : awaitingReview}</span> : null}</button>;
