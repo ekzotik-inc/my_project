@@ -177,7 +177,7 @@ function DashboardLayoutContent({
       <div className="relative" ref={sidebarRef}>
         <Sidebar
           collapsible="icon"
-          className="border-r border-[#D6E6D9] bg-[#F7FBF4]/90 backdrop-blur"
+          className="border-r border-[#E8DFC9] bg-[#F9F6EC]/92 backdrop-blur"
           disableTransition={isResizing}
         >
           <SidebarHeader className="h-20 justify-center">
@@ -263,9 +263,9 @@ function DashboardLayoutContent({
         />
       </div>
 
-      <SidebarInset className="bg-[radial-gradient(circle_at_95%_0%,rgba(199,229,170,0.28),transparent_22rem),radial-gradient(circle_at_3%_16%,rgba(211,235,246,0.32),transparent_24rem)]">
+      <SidebarInset className="bg-[radial-gradient(circle_at_95%_0%,rgba(235,211,155,0.28),transparent_22rem),radial-gradient(circle_at_3%_16%,rgba(213,231,217,0.3),transparent_24rem)]">
         {isMobile && (
-          <div className="sticky top-0 z-40 flex min-h-16 items-center justify-between border-b border-[#E1EADF] bg-[#F9FCF7]/92 px-3 pt-[var(--tg-safe-top)] backdrop-blur supports-[backdrop-filter]:backdrop-blur">
+          <div className="sticky top-0 z-40 flex min-h-16 items-center justify-between border-b border-[#E9DFCB] bg-[#FBF8F0]/92 px-3 pt-[var(--tg-safe-top)] backdrop-blur supports-[backdrop-filter]:backdrop-blur">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="h-10 w-10 rounded-xl border border-[#E3ECE1] bg-white shadow-sm" />
               <VisibleDeedMark className="h-9 w-9 rounded-xl [&_svg:first-child]:h-4 [&_svg:first-child]:w-4" />

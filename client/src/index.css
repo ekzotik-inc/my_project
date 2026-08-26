@@ -57,24 +57,24 @@
   --chart-4: oklch(0.86 0.12 95);
   --chart-5: oklch(0.64 0.13 335);
   --radius: 1.25rem;
-  --background: oklch(0.978 0.015 115);
-  --foreground: oklch(0.22 0.025 155);
-  --card: oklch(0.995 0.008 110);
+  --background: oklch(0.966 0.018 88);
+  --foreground: oklch(0.23 0.032 150);
+  --card: oklch(0.99 0.012 88);
   --card-foreground: oklch(0.22 0.025 155);
-  --popover: oklch(0.995 0.008 110);
+  --popover: oklch(0.99 0.012 88);
   --popover-foreground: oklch(0.22 0.025 155);
-  --secondary: oklch(0.95 0.04 110);
+  --secondary: oklch(0.94 0.035 88);
   --secondary-foreground: oklch(0.3 0.045 155);
-  --muted: oklch(0.94 0.025 120);
-  --muted-foreground: oklch(0.46 0.035 155);
-  --accent: oklch(0.92 0.075 100);
+  --muted: oklch(0.93 0.022 88);
+  --muted-foreground: oklch(0.45 0.034 145);
+  --accent: oklch(0.91 0.065 92);
   --accent-foreground: oklch(0.26 0.045 155);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.88 0.025 120);
-  --input: oklch(0.88 0.025 120);
+  --border: oklch(0.86 0.025 88);
+  --input: oklch(0.86 0.025 88);
   --ring: oklch(0.58 0.12 155);
-  --sidebar: oklch(0.965 0.025 115);
+  --sidebar: oklch(0.955 0.023 88);
   --sidebar-foreground: oklch(0.22 0.025 155);
   --sidebar-accent: oklch(0.91 0.07 105);
   --sidebar-accent-foreground: oklch(0.22 0.025 155);
@@ -114,10 +114,11 @@
 
 @layer base {
   * { @apply border-border outline-ring/50; }
+  h1 { font-family: "Playfair Display", Georgia, serif; font-weight: 700; letter-spacing: -0.055em; }
   body {
     @apply bg-background text-foreground;
     font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
-    background-image: radial-gradient(circle at 4% 0%, oklch(0.93 0.08 104 / 42%), transparent 25rem), radial-gradient(circle at 96% 10%, oklch(0.92 0.07 202 / 38%), transparent 25rem), linear-gradient(130deg, oklch(0.985 0.01 115 / 70%), transparent 55%);
+    background-image: radial-gradient(circle at 4% 0%, oklch(0.92 0.08 96 / 36%), transparent 25rem), radial-gradient(circle at 96% 8%, oklch(0.92 0.055 65 / 34%), transparent 23rem), linear-gradient(130deg, oklch(0.97 0.018 88 / 88%), transparent 55%);
     text-rendering: optimizeLegibility;
     -webkit-tap-highlight-color: transparent;
   }
@@ -133,6 +134,11 @@
 
 @layer utilities {
   .paper-grain { background-image: radial-gradient(oklch(0.3 0.02 155 / 8%) 0.7px, transparent 0.7px); background-size: 12px 12px; }
+  .journal-display { font-family: "Playfair Display", Georgia, serif; font-weight: 700; letter-spacing: -0.055em; }
+  .journal-kicker { font-size: 0.625rem; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; }
+  .journal-rule { height: 1px; background: linear-gradient(90deg, transparent, oklch(0.6 0.1 90 / 55%), transparent); }
+  .journal-surface { border: 1px solid oklch(0.28 0.03 150 / 9%); background: linear-gradient(135deg, oklch(0.996 0.01 88 / 96%), oklch(0.967 0.018 88 / 94%)); box-shadow: 0 20px 50px -40px oklch(0.2 0.04 150 / 55%); }
+  .journal-label { color: #9B7330; font-size: 0.625rem; font-weight: 800; letter-spacing: 0.16em; }
   .soft-press { transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 180ms cubic-bezier(0.23, 1, 0.32, 1); }
   .soft-press:active { transform: scale(0.975); }
   .float-slow { animation: leaf-float 7s ease-in-out infinite; }
