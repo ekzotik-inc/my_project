@@ -1,0 +1,35 @@
+/* Production direction: Action Console for tasks/data, Community Mosaic for people/photos. */
+.participant-console-shell { background: #f3f5f9; color: #111b36; }
+.participant-console-header { padding: .2rem 0 .7rem; }
+.participant-console-header button { border-color: #dce3f4 !important; background: #fff !important; box-shadow: none !important; }
+.hybrid-command-hero { position: relative; overflow: hidden; border-radius: 1.45rem !important; background: #111b36 !important; box-shadow: 0 18px 38px -26px rgb(17 27 54 / 74%) !important; }
+.hybrid-command-hero::after { position: absolute; right: -2.5rem; bottom: -3.75rem; width: 12rem; height: 12rem; border: 1.6rem solid rgb(197 238 112 / 17%); border-radius: 50%; content: ""; }
+.hybrid-command-hero .journal-rule { background: repeating-linear-gradient(90deg, rgb(197 238 112 / 85%) 0 12px, transparent 12px 17px) !important; }
+.hybrid-command-hero .float-slow, .hybrid-command-hero > div.absolute { display: none !important; }
+.hybrid-next-command { position: relative; overflow: hidden; border: 0 !important; border-radius: 1.2rem !important; background: #2850ed !important; padding: 1.1rem !important; color: #fff !important; box-shadow: 0 14px 28px -23px rgb(40 80 237 / 76%); }
+.hybrid-next-command::before { position: absolute; top: -2rem; right: 1rem; width: 4.75rem; height: 4.75rem; border-radius: 1.25rem; background: rgb(255 255 255 / 9%); content: ""; transform: rotate(24deg); }
+.hybrid-next-command > * { position: relative; }
+.hybrid-next-command span:first-child { background: rgb(255 255 255 / 14%) !important; color: #c5ee70 !important; }
+.hybrid-next-command h2 { color: #fff; }
+.hybrid-next-command > span:last-child { border: 1px solid rgb(255 255 255 / 17%); background: transparent !important; color: rgb(255 255 255 / 75%) !important; }
+.hybrid-console-surface { border: 1px solid #dbe3f4 !important; border-radius: 1.2rem !important; background: #fff !important; box-shadow: none !important; }
+.hybrid-console-surface .journal-label { color: #2850ed !important; }
+.hybrid-console-surface .rounded-2xl { border-radius: 0 !important; background: #fff !important; }
+.hybrid-data-cells { gap: 0 !important; overflow: hidden; border: 1px solid #dbe3f4; border-radius: .9rem; }
+.hybrid-data-cells > div { min-height: 6.35rem; border-right: 1px solid #dbe3f4; border-left: 0; }
+.hybrid-data-cells > div:last-child { border-right: 0; }
+.hybrid-data-cells > div:nth-child(1) { background: #fff !important; }.hybrid-data-cells > div:nth-child(2) { background: #fff !important; }.hybrid-data-cells > div:nth-child(3) { background: #fff !important; }
+.hybrid-data-cells svg { color: #2850ed !important; }
+.hybrid-data-cells p:last-child { color: #63708c !important; }
+.hybrid-mosaic-feed { border: 0 !important; border-radius: 1.2rem !important; background: #fffaf1 !important; box-shadow: none !important; }
+.hybrid-mosaic-feed .journal-label { color: #d46a4d !important; }.hybrid-mosaic-feed > div > svg { color: #d46a4d !important; }
+.hybrid-mosaic-feed .kod-feed-item { border-color: #eddfcf !important; }.hybrid-mosaic-feed .kod-feed-item > span { border-radius: .75rem .75rem .75rem .2rem !important; background: #ffebe3 !important; color: #c55337 !important; }
+.participant-hybrid-dock { border: 0 !important; border-radius: 1.15rem !important; background: #111b36 !important; padding: .42rem !important; box-shadow: 0 18px 34px -20px rgb(17 27 54 / 66%) !important; }
+.participant-hybrid-dock button { min-height: 3.35rem; border-radius: .82rem !important; color: rgb(255 255 255 / 67%) !important; }.participant-hybrid-dock button[class*="bg-"] { background: #ff795e !important; color: #fff !important; }.participant-hybrid-dock button:nth-child(2) { position: relative; }.participant-hybrid-dock button:nth-child(2)::after { position: absolute; top: .23rem; right: calc(50% - .8rem); width: .3rem; height: .3rem; border-radius: 50%; background: #c5ee70; content: ""; }
+.mosaic-gallery-hero { border-radius: 1.45rem !important; background: #3a2821 !important; box-shadow: none !important; }.mosaic-gallery-hero .origin-gallery-orb { display: none; }.mosaic-gallery-hero::before { position: absolute; top: -4rem; right: -3.5rem; width: 12rem; height: 12rem; border: 1.5rem solid rgb(255 255 255 / 10%); border-radius: 50%; content: ""; }.mosaic-gallery-hero::after { position: absolute; bottom: -4rem; left: -2rem; width: 9rem; height: 9rem; border-radius: 48% 52% 46% 54%; background: #ff795e; content: ""; transform: rotate(18deg); }.mosaic-gallery-hero > div { position: relative; z-index: 1; }.mosaic-gallery-hero .journal-display { font-family: "Trebuchet MS", ui-sans-serif, sans-serif !important; letter-spacing: -.065em; }.mosaic-gallery-hero .grid { border-radius: .8rem .8rem .8rem .2rem !important; background: #ff795e !important; }
+.mosaic-gallery-surface { border: 0 !important; border-radius: 1.2rem !important; background: #fffaf1 !important; box-shadow: none !important; }.mosaic-gallery-surface .journal-label { color: #d46a4d !important; }.mosaic-gallery-surface .gallery-counter { background: #ffebe3 !important; color: #c55337 !important; }
+.mosaic-gallery-surface .origin-stack-stage { perspective: 800px; }.mosaic-gallery-surface .origin-stack-plane { border-radius: 1.2rem !important; box-shadow: 0 14px 26px -21px rgb(58 40 33 / 68%) !important; }.mosaic-gallery-surface .origin-stack-plane:nth-child(n+3) { opacity: .52 !important; }.mosaic-gallery-surface .kod-photo-caption { padding: 3rem 1rem 1rem !important; background: linear-gradient(180deg, transparent, rgb(48 28 21 / 91%)) !important; }.mosaic-gallery-surface .kod-photo-meta i { background: #c5ee70 !important; }
+.mosaic-gallery-surface .gallery-nav-button { border-color: #ead9c4 !important; background: #fffdf8 !important; color: #795e52 !important; }.mosaic-gallery-surface .gallery-nav-button-primary { border-color: #ff795e !important; background: #ff795e !important; color: #fff !important; }
+.mosaic-gallery-surface .soft-press { color: #c55337 !important; }
+@media (prefers-reduced-motion: no-preference) { .hybrid-next-command, .hybrid-command-hero, .mosaic-gallery-surface { animation: hybrid-arrive 260ms cubic-bezier(.23,1,.32,1) both; } }
+@keyframes hybrid-arrive { from { opacity: 0; transform: translate3d(0,8px,0); } to { opacity: 1; transform: translate3d(0,0,0); } }
