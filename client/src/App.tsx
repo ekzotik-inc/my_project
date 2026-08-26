@@ -17,6 +17,7 @@ import ExportsPage from "./pages/ExportsPage";
 import ReviewCenterPage from "./pages/ReviewCenterPage";
 import StatisticsPage from "./pages/StatisticsPage";
 import GalleryPage from "./pages/GalleryPage";
+import DesignDirectionsPage from "./pages/DesignDirectionsPage";
 import MiniAppGatewayPage from "./pages/MiniAppGatewayPage";
 import { useAuth } from "./_core/hooks/useAuth";
 
@@ -51,6 +52,7 @@ function Router() {
       <Route path={"/review"} component={ReviewCenterRoute} />
       <Route path={"/statistics"} component={StatisticsPage} />
       <Route path={"/gallery"} component={GalleryPage} />
+      <Route path={"/design-lab"} component={DesignDirectionsPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

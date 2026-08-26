@@ -162,3 +162,5 @@
 - [x] Найти и оценить open-source design agents/repositories для design review и design-to-code workflow следующего redesign.
 - [x] Зафиксировать собственный DESIGN.md для «Добрых дел» как обязательный contract следующего redesign.
 - [x] Документировать tma.js guardrails и privacy-safe screenshot-to-code prototype process без реальных participant data.
+- [x] Подготовить три distinct mobile visual directions для «Моего пути» и «Галереи» на одном безопасном, обезличенном data model.
+- [ ] Сравнить три направления по hierarchy, Telegram-native usability и performance и выбрать один production direction до дальнейшего redesign.
