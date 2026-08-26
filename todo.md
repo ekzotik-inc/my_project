@@ -148,3 +148,5 @@
 - [x] Добавить server-side read model общей галереи только для фотографий из одобренных отчётов, не раскрывая лишние персональные данные.
 - [x] Встроить mobile-first галерею подтверждённых фото на основе stacked-carousel reference с загрузкой, empty/error состояниями и lazy image decoding.
 - [ ] Проверить gesture, keyboard и reduced-motion поведение gallery carousel, исключив автопрокрутку и тяжёлые layout-анимации в Telegram WebView.
+- [x] Перенести «Галерею» из карточки «Мой путь» в отдельную пятую вкладку нижней participant-навигации.
+- [x] Переработать visual/interactions gallery в точную mobile-first интерпретацию OriginKit Stacked Carousel reference вместо упрощённой стопки карточек.

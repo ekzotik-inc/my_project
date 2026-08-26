@@ -156,15 +156,19 @@
   .achievement-category[data-state="open"] .achievement-grid { animation: achievement-grid-in 260ms cubic-bezier(0.23, 1, 0.32, 1) both; }
   .achievement-category[data-state="open"] .achievement-badge-card { animation: achievement-badge-in 300ms cubic-bezier(0.23, 1, 0.32, 1) both; animation-delay: calc(var(--achievement-stagger) * 38ms); }
   .achievement-detail-sheet[data-state="open"] { animation: achievement-sheet-in 260ms cubic-bezier(0.23, 1, 0.32, 1) both; }
-  .gallery-entry-card { position: relative; background: linear-gradient(135deg, #17233D, #3158C9); box-shadow: 0 20px 45px -32px rgb(23 35 61 / 76%); }
-  .gallery-entry-orb { position: absolute; right: -2.25rem; top: -2.5rem; width: 9rem; height: 9rem; border-radius: 999px; background: radial-gradient(circle at 34% 34%, rgb(221 247 93 / 94%), rgb(103 150 255 / 46%) 42%, transparent 68%); }
-  .gallery-surface { border: 1px solid rgb(49 108 255 / 13%); background: linear-gradient(145deg, #FFFFFF, #F4F6FF); box-shadow: 0 22px 48px -38px rgb(49 108 255 / 50%); }
+  .origin-gallery-hero { box-shadow: 0 25px 60px -35px rgb(17 24 39 / 82%); }
+  .origin-gallery-orb { position: absolute; border-radius: 999px; filter: blur(2px); }
+  .origin-gallery-orb-lime { right: -2.5rem; top: -3.2rem; width: 10rem; height: 10rem; background: radial-gradient(circle at 35% 38%, rgb(221 247 93 / 96%), rgb(86 131 255 / 46%) 44%, transparent 69%); }
+  .origin-gallery-orb-coral { bottom: -3.5rem; right: 4.3rem; width: 7.5rem; height: 7.5rem; background: radial-gradient(circle, rgb(244 183 169 / 85%), transparent 68%); }
+  .origin-gallery-surface { border: 1px solid rgb(49 108 255 / 13%); background: linear-gradient(145deg, #FFFFFF, #F4F6FF); box-shadow: 0 22px 48px -38px rgb(49 108 255 / 50%); }
   .gallery-counter { border: 1px solid #DCE4FF; border-radius: 999px; background: #EEF2FF; color: #3158C9; padding: .4rem .62rem; font-size: .66rem; font-weight: 800; }
-  .gallery-stack-viewport { isolation: isolate; cursor: grab; }
-  .gallery-stack-viewport:active { cursor: grabbing; }
-  .gallery-stack-card { height: calc(100% - 1.75rem); background: #DCE4FF; box-shadow: 0 22px 38px -26px rgb(23 35 61 / 76%); transition: transform 280ms cubic-bezier(0.23, 1, 0.32, 1), opacity 220ms cubic-bezier(0.23, 1, 0.32, 1); will-change: transform, opacity; }
-  .gallery-stack-card img { pointer-events: none; user-select: none; }
-  .gallery-photo-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgb(13 20 38 / 5%) 34%, rgb(13 20 38 / 76%) 100%); pointer-events: none; }
+  .origin-stack-stage { isolation: isolate; cursor: grab; perspective: 900px; perspective-origin: 50% 32%; }
+  .origin-stack-stage:active { cursor: grabbing; }
+  .origin-stack-plane, .origin-stack-incoming-card { height: calc(100% - 7.25rem); background: #DCE4FF; box-shadow: 0 22px 38px -26px rgb(17 24 39 / 80%); transform-origin: 50% 50%; transition: transform 260ms cubic-bezier(0.23, 1, 0.32, 1), opacity 220ms cubic-bezier(0.23, 1, 0.32, 1); will-change: transform, opacity; }
+  .origin-stack-plane img, .origin-stack-incoming-card img { pointer-events: none; user-select: none; }
+  .origin-stack-plane::after { position: absolute; inset: 0; border: 1px solid rgb(255 255 255 / 35%); border-radius: inherit; box-shadow: inset 0 1px 0 rgb(255 255 255 / 25%); content: ""; pointer-events: none; }
+  .origin-stack-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgb(13 20 38 / 4%) 30%, rgb(13 20 38 / 78%) 100%); pointer-events: none; }
+  .origin-stack-incoming-card-prev { animation: origin-stack-in-from-left 260ms cubic-bezier(0.23, 1, 0.32, 1) both; }
   .gallery-nav-button { display: inline-flex; min-height: 2.8rem; align-items: center; justify-content: center; gap: .32rem; border: 1px solid #DDE3F0; border-radius: .9rem; background: #FFFFFF; color: #536078; padding: .65rem .78rem; font-size: .73rem; font-weight: 800; transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), background-color 180ms cubic-bezier(0.23, 1, 0.32, 1), color 180ms cubic-bezier(0.23, 1, 0.32, 1); }
   .gallery-nav-button:active { transform: scale(.97); }
   .gallery-nav-button:disabled { opacity: .38; }
@@ -224,6 +228,11 @@
 @keyframes achievement-sheet-in {
   from { opacity: 0; transform: translate3d(0, 14px, 0) scale(.97); }
   to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes origin-stack-in-from-left {
+  from { opacity: 0; transform: translate3d(-118%, 0, 0) rotate(-12deg); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) rotate(-2.2deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {
