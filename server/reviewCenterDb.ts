@@ -24,6 +24,34 @@ const submittedOrLater = sql<number>`coalesce(sum(case when ${activityAssignment
 const approvedTotal = sql<number>`coalesce(sum(case when ${activityAssignments.status} = 'approved' then 1 else 0 end), 0)`;
 const awardedTotal = sql<number>`coalesce(sum(case when ${activityAssignments.status} = 'approved' then ${activityAssignments.awardedPoints} else 0 end), 0)`;
 
+export function buildReviewAnalytics(input: {
+  participants: Array<{ id: number; name: string | null; teamName: string | null; assignedCount: number; submittedCount: number; approvedCount: number; awardedPoints: number; latestActivityAt: Date | null }>;
+  teams: Array<{ id: number; name: string | null; memberCount: number; assignedCount: number; submittedCount: number; approvedCount: number; awardedPoints: number }>;
+  statusCounts: Record<string, number>;
+  activePeriodTitle: string | null;
+}) {
+  const workflow = [
+    { id: "assigned", label: "Не начато", count: input.statusCounts.assigned ?? 0, tone: "slate" as const },
+    { id: "in_progress", label: "В процессе", count: input.statusCounts.in_progress ?? 0, tone: "sky" as const },
+    { id: "under_review", label: "На проверке", count: input.statusCounts.under_review ?? 0, tone: "rose" as const },
+    { id: "approved", label: "Подтверждено", count: input.statusCounts.approved ?? 0, tone: "mint" as const },
+    { id: "rejected", label: "Доработка", count: input.statusCounts.rejected ?? 0, tone: "amber" as const },
+  ];
+  const totalAssignments = workflow.reduce((sum, item) => sum + item.count, 0) + (input.statusCounts.expired ?? 0) + (input.statusCounts.submitted ?? 0);
+  const participantsStarted = input.participants.filter(item => item.submittedCount > 0).length;
+  return {
+    activePeriodTitle: input.activePeriodTitle,
+    totalParticipants: input.participants.length,
+    participantsStarted,
+    participantsAwaitingFirstResult: input.participants.filter(item => item.assignedCount > 0 && item.approvedCount === 0).length,
+    totalAwardedPoints: input.participants.reduce((sum, item) => sum + item.awardedPoints, 0),
+    completionRate: totalAssignments ? Math.round(((input.statusCounts.approved ?? 0) / totalAssignments) * 100) : 0,
+    workflow,
+    topParticipants: input.participants.slice(0, 10),
+    topTeams: input.teams.slice(0, 3),
+  };
+}
+
 export function resolveReviewDecision(status: AssignmentWorkflowStatus, decision: "approved" | "rejected", activityPoints: number) {
   return decision === "approved"
     ? approveAfterModeration(status, activityPoints)
@@ -33,7 +61,7 @@ export function resolveReviewDecision(status: AssignmentWorkflowStatus, decision
 export async function getReviewCenterDashboard() {
   const db = await requireDb();
 
-  const [queueRows, evidenceRows, teamRows, participantRows] = await Promise.all([
+  const [queueRows, evidenceRows, teamRows, participantRows, workflowRows, activePeriodRows] = await Promise.all([
     db
       .select({
         assignmentId: activityAssignments.id,
@@ -121,6 +149,11 @@ export async function getReviewCenterDashboard() {
       .where(eq(participants.status, "approved"))
       .groupBy(participants.id, participants.fullName, teams.name)
       .orderBy(desc(approvedTotal), desc(submittedOrLater), desc(awardedTotal), asc(participants.fullName)),
+    db
+      .select({ status: activityAssignments.status, total: count(activityAssignments.id) })
+      .from(activityAssignments)
+      .groupBy(activityAssignments.status),
+    db.select({ title: activityPeriods.title }).from(activityPeriods).where(eq(activityPeriods.status, "active")).limit(1),
   ]);
 
   const evidenceByAssignment = new Map<number, typeof evidenceRows>();
@@ -136,6 +169,28 @@ export async function getReviewCenterDashboard() {
     attachmentCount: Number(row.attachmentCount),
     evidence: evidenceByAssignment.get(row.assignmentId) ?? [],
   }));
+  const normalizedTeams = teamRows.map(row => ({
+    ...row,
+    memberCount: Number(row.memberCount),
+    assignedCount: Number(row.assignedCount),
+    submittedCount: Number(row.submittedCount),
+    approvedCount: Number(row.approvedCount),
+    awardedPoints: Number(row.awardedPoints),
+  }));
+  const normalizedParticipants = participantRows.map(row => ({
+    ...row,
+    assignedCount: Number(row.assignedCount),
+    submittedCount: Number(row.submittedCount),
+    approvedCount: Number(row.approvedCount),
+    awardedPoints: Number(row.awardedPoints),
+  }));
+  const statusCounts = Object.fromEntries(workflowRows.map(row => [row.status, Number(row.total)]));
+  const analytics = buildReviewAnalytics({
+    participants: normalizedParticipants,
+    teams: normalizedTeams,
+    statusCounts,
+    activePeriodTitle: activePeriodRows[0]?.title ?? null,
+  });
 
   return {
     summary: {
@@ -148,22 +203,10 @@ export async function getReviewCenterDashboard() {
       participantsCloseToFirstResult: participantRows.filter(row => Number(row.assignedCount) > 0 && Number(row.approvedCount) === 0).length,
       periodFinishers: participantRows.filter(row => Number(row.assignedCount) > 0 && Number(row.approvedCount) >= Number(row.assignedCount)).length,
     },
+    analytics,
     queue,
-    teams: teamRows.map(row => ({
-      ...row,
-      memberCount: Number(row.memberCount),
-      assignedCount: Number(row.assignedCount),
-      submittedCount: Number(row.submittedCount),
-      approvedCount: Number(row.approvedCount),
-      awardedPoints: Number(row.awardedPoints),
-    })),
-    participants: participantRows.map(row => ({
-      ...row,
-      assignedCount: Number(row.assignedCount),
-      submittedCount: Number(row.submittedCount),
-      approvedCount: Number(row.approvedCount),
-      awardedPoints: Number(row.awardedPoints),
-    })),
+    teams: normalizedTeams,
+    participants: normalizedParticipants,
   };
 }
 
