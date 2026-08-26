@@ -151,3 +151,4 @@
 - [x] Перенести «Галерею» из карточки «Мой путь» в отдельную пятую вкладку нижней participant-навигации.
 - [x] Переработать visual/interactions gallery в точную mobile-first интерпретацию OriginKit Stacked Carousel reference вместо упрощённой стопки карточек.
 - [x] Удалить техническую performance-подсказку из нижней части participant gallery, сохранив саму оптимизированную реализацию.
+- [ ] Сделать swipe gallery намеренным: direction lock, высокая drag-дистанция/velocity threshold и tap без смены карточки.
