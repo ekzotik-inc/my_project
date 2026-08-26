@@ -7,8 +7,7 @@ import { type PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, use
 type GalleryPhoto = { id: number; imageUrl: string; activityTitle: string; teamName: string | null; createdAt: Date };
 type Direction = "prev" | "next";
 type DeckTransition = { direction: Direction; outgoing: GalleryPhoto; incoming: GalleryPhoto } | null;
-type DragAxis = "pending" | "horizontal" | "vertical";
-type DragState = { pointerId: number | null; startX: number; startY: number; axis: DragAxis };
+type DragState = { pointerId: number | null; startX: number; startY: number };
 
 const deckGeometry = [
   { x: 0, y: 0, rotate: -2.2, scale: 1 },
@@ -24,10 +23,9 @@ function formatPhotoDate(value: Date) {
 
 export function ParticipantPhotoGallery({ initData }: { initData: string }) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [dragX, setDragX] = useState(0);
   const [selectedPhoto, setSelectedPhoto] = useState<GalleryPhoto | null>(null);
   const [transition, setTransition] = useState<DeckTransition>(null);
-  const drag = useRef<DragState>({ pointerId: null, startX: 0, startY: 0, axis: "pending" });
+  const drag = useRef<DragState>({ pointerId: null, startX: 0, startY: 0 });
   const suppressTap = useRef(false);
   const gallery = trpc.gallery.feed.useInfiniteQuery(
     { initData, limit: 12 },
@@ -66,38 +64,28 @@ export function ParticipantPhotoGallery({ initData }: { initData: string }) {
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.pointerType === "mouse" && event.button !== 0) return;
-    drag.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, axis: "pending" };
+    drag.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY };
     event.currentTarget.setPointerCapture(event.pointerId);
-  };
-  const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (drag.current.pointerId !== event.pointerId || transition) return;
-    const deltaX = event.clientX - drag.current.startX;
-    const deltaY = event.clientY - drag.current.startY;
-    if (drag.current.axis === "pending" && Math.hypot(deltaX, deltaY) >= 12) {
-      drag.current.axis = Math.abs(deltaX) > Math.abs(deltaY) * 1.25 ? "horizontal" : "vertical";
-    }
-    if (drag.current.axis !== "horizontal") return;
-    setDragX(Math.max(-160, Math.min(160, deltaX)));
   };
   const onPointerEnd = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (drag.current.pointerId !== event.pointerId) return;
     const distance = event.clientX - drag.current.startX;
-    const wasHorizontal = drag.current.axis === "horizontal";
+    const verticalDistance = event.clientY - drag.current.startY;
     const stageWidth = event.currentTarget.clientWidth;
-    const requiredDistance = Math.max(104, Math.min(144, stageWidth * 0.3));
-    drag.current.pointerId = null;
-    if (wasHorizontal && Math.abs(distance) >= 12) {
+    const requiredDistance = Math.max(88, Math.min(120, stageWidth * 0.25));
+    const isHorizontal = Math.abs(distance) > Math.abs(verticalDistance) * 1.35;
+    drag.current = { pointerId: null, startX: 0, startY: 0 };
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    if (isHorizontal && Math.abs(distance) >= 12) {
       suppressTap.current = true;
       window.setTimeout(() => { suppressTap.current = false; }, 280);
     }
-    if (wasHorizontal && Math.abs(distance) >= requiredDistance) {
+    if (isHorizontal && Math.abs(distance) >= requiredDistance) {
       move(distance < 0 ? "next" : "prev");
     }
-    setDragX(0);
   };
   const onPointerCancel = () => {
-    drag.current = { pointerId: null, startX: 0, startY: 0, axis: "pending" };
-    setDragX(0);
+    drag.current = { pointerId: null, startX: 0, startY: 0 };
   };
 
   if (gallery.isLoading) return <GalleryLoading />;
@@ -108,7 +96,7 @@ export function ParticipantPhotoGallery({ initData }: { initData: string }) {
   const canMoveNext = activeIndex < photos.length - 1 && !transition;
   const frontGeometry = deckGeometry[0];
 
-  return <><section className="origin-gallery-hero relative overflow-hidden rounded-[2rem] bg-[#111827] px-6 py-7 text-white shadow-[0_25px_60px_-35px_rgba(17,24,39,0.82)]"><div className="origin-gallery-orb origin-gallery-orb-lime" /><div className="origin-gallery-orb origin-gallery-orb-coral" /><div className="relative"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-white/14"><Images className="h-5 w-5" /></span><p className="mt-5 text-[10px] font-extrabold tracking-[0.14em] text-white/65">ОБЩАЯ ГАЛЕРЕЯ</p><h1 className="journal-display mt-2 max-w-[17rem] text-[2.5rem] leading-[0.92]">Добрые дела в кадре</h1><p className="mt-4 max-w-[18rem] text-sm leading-5 text-white/72">Только подтверждённые P&C моменты команды — листайте глубокой колодой.</p></div></section><section className="origin-gallery-surface mt-4 rounded-[1.75rem] p-4"><div className="flex items-center justify-between gap-3"><div><p className="journal-label">STACKED CAROUSEL</p><h2 className="mt-1 text-xl font-extrabold tracking-[-0.045em]">Лента команды</h2></div><span className="gallery-counter">{activeIndex + 1} · {photos.length}{gallery.hasNextPage ? "+" : ""}</span></div><div className="origin-stack-stage relative mt-5 aspect-[4/5] select-none" style={{ touchAction: "pan-y" }} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd} onPointerCancel={onPointerCancel}>{[...deckCards].reverse().map(({ depth, geometry, photo }) => { const isFront = depth === 0; const isIncomingNext = transition?.direction === "next" && depth === 1; const isOutgoing = Boolean(transition) && isFront; const transform = isOutgoing ? `translate3d(${transition?.direction === "next" ? "-118%" : "118%"}, ${geometry.y}px, 0) rotate(${transition?.direction === "next" ? -12 : 12}deg) scale(${geometry.scale})` : isIncomingNext ? `translate3d(0, ${frontGeometry.y}px, 0) rotate(${frontGeometry.rotate}deg) scale(${frontGeometry.scale})` : isFront ? `translate3d(${dragX}px, ${geometry.y}px, 0) rotate(${geometry.rotate}deg) scale(${geometry.scale})` : `translate3d(${geometry.x}px, ${geometry.y}px, 0) rotate(${geometry.rotate}deg) scale(${geometry.scale})`; return <button key={`${photo.id}-${depth}`} type="button" onClick={() => { if (isFront && !suppressTap.current && !transition) { telegramImpact("light"); setSelectedPhoto(photo); } }} className="origin-stack-plane absolute inset-x-0 top-[5.5rem] overflow-hidden rounded-[1.7rem] text-left outline-none focus-visible:ring-2 focus-visible:ring-[#316CFF]" style={{ zIndex: 8 - depth, opacity: isOutgoing ? 0 : 1 - depth * 0.1, transform, pointerEvents: isFront ? "auto" : "none" }} aria-label={isFront ? `Открыть фотографию: ${photo.activityTitle}` : undefined}><img src={photo.imageUrl} alt={isFront ? `Фотография с активности «${photo.activityTitle}»` : ""} aria-hidden={!isFront} draggable={false} loading={isFront ? "eager" : "lazy"} decoding="async" className="h-full w-full object-cover" />{isFront && <><span className="origin-stack-shade" /><span className="absolute inset-x-5 bottom-5 z-10"><span className="block text-[10px] font-extrabold tracking-[0.14em] text-white/70">{photo.teamName || "КОМАНДА"}</span><span className="mt-1 block line-clamp-2 text-xl font-extrabold leading-6 text-white">{photo.activityTitle}</span><span className="mt-2 block text-[11px] font-bold text-white/74">{formatPhotoDate(photo.createdAt)} · коснитесь для полного кадра</span></span></>}</button>; })}{transition?.direction === "prev" && <div className="origin-stack-incoming-card origin-stack-incoming-card-prev absolute inset-x-0 top-[5.5rem] z-[7] overflow-hidden rounded-[1.7rem]"><img src={transition.incoming.imageUrl} alt="" aria-hidden="true" draggable={false} className="h-full w-full object-cover" /></div>}</div><div className="mt-4 flex items-center justify-between gap-3"><button type="button" onClick={() => move("prev")} disabled={!canMovePrev} className="gallery-nav-button" aria-label="Предыдущая фотография"><ChevronLeft className="h-5 w-5" /><span>Назад</span></button><p className="text-center text-[10px] font-bold leading-4 text-[#66718A]">Проведите по фото влево или вправо<br />для смены карточки</p><button type="button" onClick={() => move("next")} disabled={!canMoveNext} className="gallery-nav-button gallery-nav-button-primary" aria-label="Следующая фотография"><span>{gallery.isFetchingNextPage ? "Загрузка" : "Дальше"}</span>{gallery.isFetchingNextPage ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ChevronRight className="h-5 w-5" />}</button></div>{gallery.hasNextPage && <button type="button" onClick={() => gallery.fetchNextPage()} disabled={gallery.isFetchingNextPage} className="soft-press mt-4 w-full rounded-xl py-2.5 text-xs font-extrabold text-[#3158C9] disabled:opacity-50">{gallery.isFetchingNextPage ? "Подгружаем фотографии…" : "Показать ещё"}</button>}</section><Dialog open={Boolean(selectedPhoto)} onOpenChange={open => !open && setSelectedPhoto(null)}>{selectedPhoto && <DialogContent className="gallery-lightbox max-w-[calc(100%-1.5rem)] overflow-hidden rounded-[1.75rem] border-0 bg-[#111827] p-0 text-white shadow-2xl"><img src={selectedPhoto.imageUrl} alt={`Фотография с активности «${selectedPhoto.activityTitle}»`} decoding="async" className="max-h-[70vh] w-full object-contain" /><div className="p-5"><p className="text-[10px] font-extrabold tracking-[0.14em] text-white/60">{selectedPhoto.teamName || "КОМАНДА"}</p><p className="mt-1 text-lg font-extrabold">{selectedPhoto.activityTitle}</p><p className="mt-2 text-xs text-white/65">{formatPhotoDate(selectedPhoto.createdAt)}</p></div></DialogContent>}</Dialog></>;
+  return <><section className="origin-gallery-hero relative overflow-hidden rounded-[1.7rem] bg-[#111827] px-5 py-5 text-white shadow-[0_25px_60px_-35px_rgba(17,24,39,0.82)]"><div className="origin-gallery-orb origin-gallery-orb-lime" /><div className="origin-gallery-orb origin-gallery-orb-coral" /><div className="relative"><span className="grid h-9 w-9 place-items-center rounded-xl bg-white/14"><Images className="h-4 w-4" /></span><p className="mt-3 text-[9px] font-extrabold tracking-[0.14em] text-white/65">ОБЩАЯ ГАЛЕРЕЯ</p><h1 className="journal-display mt-1.5 max-w-[17rem] text-[2.12rem] leading-[0.92]">Добрые дела в кадре</h1><p className="mt-3 max-w-[18rem] text-xs leading-5 text-white/72">Только подтверждённые P&C моменты команды.</p></div></section><section className="origin-gallery-surface mt-3 rounded-[1.5rem] p-3"><div className="flex items-center justify-between gap-3"><div><p className="journal-label">STACKED CAROUSEL</p><h2 className="mt-1 text-lg font-extrabold tracking-[-0.045em]">Лента команды</h2></div><span className="gallery-counter">{activeIndex + 1} · {photos.length}{gallery.hasNextPage ? "+" : ""}</span></div><div className="origin-stack-stage relative mt-3 aspect-[4/5] select-none" style={{ touchAction: "pan-y" }} onPointerDown={onPointerDown} onPointerUp={onPointerEnd} onPointerCancel={onPointerCancel}>{[...deckCards].reverse().map(({ depth, geometry, photo }) => { const isFront = depth === 0; const isIncomingNext = transition?.direction === "next" && depth === 1; const isOutgoing = Boolean(transition) && isFront; const transform = isOutgoing ? `translate3d(${transition?.direction === "next" ? "-118%" : "118%"}, ${geometry.y}px, 0) rotate(${transition?.direction === "next" ? -12 : 12}deg) scale(${geometry.scale})` : isIncomingNext ? `translate3d(0, ${frontGeometry.y}px, 0) rotate(${frontGeometry.rotate}deg) scale(${frontGeometry.scale})` : `translate3d(${geometry.x}px, ${geometry.y}px, 0) rotate(${geometry.rotate}deg) scale(${geometry.scale})`; return <button key={`${photo.id}-${depth}`} type="button" onClick={() => { if (isFront && !suppressTap.current && !transition) { telegramImpact("light"); setSelectedPhoto(photo); } }} className="origin-stack-plane absolute inset-x-0 top-[4.25rem] overflow-hidden rounded-[1.45rem] text-left outline-none focus-visible:ring-2 focus-visible:ring-[#316CFF]" style={{ zIndex: 8 - depth, opacity: isOutgoing ? 0 : 1 - depth * 0.1, transform, pointerEvents: isFront ? "auto" : "none" }} aria-label={isFront ? `Открыть фотографию: ${photo.activityTitle}` : undefined}><img src={photo.imageUrl} alt={isFront ? `Фотография с активности «${photo.activityTitle}»` : ""} aria-hidden={!isFront} draggable={false} loading={isFront ? "eager" : "lazy"} decoding="async" className="h-full w-full object-cover" />{isFront && <><span className="origin-stack-shade" /><span className="absolute inset-x-4 bottom-4 z-10"><span className="block text-[9px] font-extrabold tracking-[0.14em] text-white/70">{photo.teamName || "КОМАНДА"}</span><span className="mt-1 block line-clamp-2 text-lg font-extrabold leading-5 text-white">{photo.activityTitle}</span><span className="mt-1.5 block text-[10px] font-bold text-white/74">{formatPhotoDate(photo.createdAt)} · коснитесь для полного кадра</span></span></>}</button>; })}{transition?.direction === "prev" && <div className="origin-stack-incoming-card origin-stack-incoming-card-prev absolute inset-x-0 top-[4.25rem] z-[7] overflow-hidden rounded-[1.45rem]"><img src={transition.incoming.imageUrl} alt="" aria-hidden="true" draggable={false} className="h-full w-full object-cover" /></div>}</div><div className="mt-3 flex items-center justify-between gap-3"><button type="button" onClick={() => move("prev")} disabled={!canMovePrev} className="gallery-nav-button" aria-label="Предыдущая фотография"><ChevronLeft className="h-5 w-5" /><span>Назад</span></button><p className="text-center text-[10px] font-bold leading-4 text-[#66718A]">Проведите по фото влево или вправо</p><button type="button" onClick={() => move("next")} disabled={!canMoveNext} className="gallery-nav-button gallery-nav-button-primary" aria-label="Следующая фотография"><span>{gallery.isFetchingNextPage ? "Загрузка" : "Дальше"}</span>{gallery.isFetchingNextPage ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ChevronRight className="h-5 w-5" />}</button></div>{gallery.hasNextPage && <button type="button" onClick={() => gallery.fetchNextPage()} disabled={gallery.isFetchingNextPage} className="soft-press mt-3 w-full rounded-xl py-2.5 text-xs font-extrabold text-[#3158C9] disabled:opacity-50">{gallery.isFetchingNextPage ? "Подгружаем фотографии…" : "Показать ещё"}</button>}</section><Dialog open={Boolean(selectedPhoto)} onOpenChange={open => !open && setSelectedPhoto(null)}>{selectedPhoto && <DialogContent className="gallery-lightbox max-w-[calc(100%-1.5rem)] overflow-hidden rounded-[1.75rem] border-0 bg-[#111827] p-0 text-white shadow-2xl"><img src={selectedPhoto.imageUrl} alt={`Фотография с активности «${selectedPhoto.activityTitle}»`} decoding="async" className="max-h-[70vh] w-full object-contain" /><div className="p-5"><p className="text-[10px] font-extrabold tracking-[0.14em] text-white/60">{selectedPhoto.teamName || "КОМАНДА"}</p><p className="mt-1 text-lg font-extrabold">{selectedPhoto.activityTitle}</p><p className="mt-2 text-xs text-white/65">{formatPhotoDate(selectedPhoto.createdAt)}</p></div></DialogContent>}</Dialog></>;
 }
 
 function GalleryLoading() {

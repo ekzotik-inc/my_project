@@ -152,3 +152,4 @@
 - [x] Переработать visual/interactions gallery в точную mobile-first интерпретацию OriginKit Stacked Carousel reference вместо упрощённой стопки карточек.
 - [x] Удалить техническую performance-подсказку из нижней части participant gallery, сохранив саму оптимизированную реализацию.
 - [ ] Сделать swipe gallery намеренным: direction lock, высокая drag-дистанция/velocity threshold и tap без смены карточки.
+- [x] Заменить дёргающийся drag-follow swipe на mobile-first one-card gesture с плавным spring-завершением и компактной геометрией deck.
