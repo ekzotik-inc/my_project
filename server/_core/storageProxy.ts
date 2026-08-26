@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { getAchievementAssetKey } from "../achievementAssetProxy";
-import { storageGetSignedUrl } from "../storage";
+import { storageGetSignedUrl, storageRead } from "../storage";
 
 export function registerStorageProxy(app: Express) {
   app.get("/assets/achievement/:id.png", async (req, res) => {
@@ -11,19 +11,13 @@ export function registerStorageProxy(app: Express) {
     }
 
     try {
-      const signedUrl = await storageGetSignedUrl(key);
-      const source = await fetch(signedUrl);
-      if (!source.ok) {
-        res.status(502).send("Achievement asset unavailable");
-        return;
-      }
-      const body = Buffer.from(await source.arrayBuffer());
+      const asset = await storageRead(key);
       res.set({
-        "Content-Type": "image/png",
+        "Content-Type": asset.contentType === "image/png" ? "image/png" : "application/octet-stream",
         "Cache-Control": "public, max-age=31536000, immutable",
         "X-Content-Type-Options": "nosniff",
       });
-      res.status(200).send(body);
+      res.status(200).send(asset.data);
     } catch (err) {
       console.error("[AchievementAssetProxy] failed:", err);
       res.status(502).send("Achievement asset unavailable");
