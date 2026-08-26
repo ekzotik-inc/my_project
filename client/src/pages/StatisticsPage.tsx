@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { VisibleDeedMark } from "@/components/VisibleDeedMark";
 import { trpc } from "@/lib/trpc";
@@ -12,11 +13,11 @@ type Tab = "progress" | "team" | "leaders" | "guide";
 const rankAccents = ["bg-[#F7E6A2] text-[#72520C]", "bg-[#E2F0FA] text-[#2D647D]", "bg-[#FBE8EC] text-[#8C4653]"];
 const rankMarks = ["#1", "#2", "#3"];
 const achievementArt = {
-  first_confirmed: "https://github.com/ekzotik-inc/my_project/releases/download/achievement-stickers-v1/first_confirmed.webp",
-  three_confirmed: "https://github.com/ekzotik-inc/my_project/releases/download/achievement-stickers-v1/three_confirmed.webp",
-  impact_100: "https://github.com/ekzotik-inc/my_project/releases/download/achievement-stickers-v1/impact_100.webp",
-  period_finisher: "https://github.com/ekzotik-inc/my_project/releases/download/achievement-stickers-v1/period_finisher.webp",
-  team_spark: "https://github.com/ekzotik-inc/my_project/releases/download/achievement-stickers-v1/team_spark.webp",
+  first_confirmed: "https://github.com/ekzotik-inc/my_project/releases/download/achievement-stickers-v2/first_confirmed.png",
+  three_confirmed: "https://github.com/ekzotik-inc/my_project/releases/download/achievement-stickers-v2/three_confirmed.png",
+  impact_100: "https://github.com/ekzotik-inc/my_project/releases/download/achievement-stickers-v2/impact_100.png",
+  period_finisher: "https://github.com/ekzotik-inc/my_project/releases/download/achievement-stickers-v2/period_finisher.png",
+  team_spark: "https://github.com/ekzotik-inc/my_project/releases/download/achievement-stickers-v2/team_spark.png",
 } as const;
 const tabItems: { id: Tab; label: string; icon: typeof Leaf }[] = [
   { id: "progress", label: "Мой путь", icon: Leaf },
@@ -110,6 +111,18 @@ export default function StatisticsPage() {
   </div><nav className="fixed bottom-[calc(0.75rem+var(--tg-safe-bottom))] left-1/2 z-20 flex w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 gap-1 rounded-[1.5rem] border border-white/70 bg-white/92 p-1.5 shadow-[0_18px_45px_-25px_rgba(22,63,47,0.45)] backdrop-blur">{tabItems.map(item => <button key={item.id} onClick={() => { telegramSelectionHaptic(); setTab(item.id); }} className={`soft-press flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[10px] font-bold transition-colors ${tab === item.id ? "bg-[#163F2F] text-white" : "text-[#587065]"}`}><item.icon className="h-4 w-4" />{item.label}</button>)}</nav></main>;
 }
 
-function AchievementShelf({ achievements }: { achievements: Array<{ id: keyof typeof achievementArt; title: string; current: number; target: number; unlocked: boolean }> }) {
-  return <section className="signal-surface overflow-hidden rounded-[1.55rem] p-4"><div className="flex items-center justify-between"><div><p className="journal-label">ПРИЗНАНИЕ</p><h2 className="mt-1 text-lg font-extrabold tracking-[-0.045em]">Достижения</h2></div><span className="signal-chip rounded-full px-2.5 py-1 text-[10px] font-extrabold">{achievements.filter(item => item.unlocked).length}/{achievements.length}</span></div><div className="mt-4 grid grid-cols-5 gap-1.5">{achievements.map(item => <article key={item.id} className="min-w-0 text-center" title={`${item.title}: ${item.current}/${item.target}`}><img src={achievementArt[item.id]} alt="" aria-hidden="true" data-locked={item.unlocked ? "false" : "true"} className="achievement-sticker mx-auto h-14 w-14 object-contain sm:h-[4.5rem] sm:w-[4.5rem]" /><p className="mt-1.5 line-clamp-2 min-h-7 text-[9px] font-bold leading-3 text-[#384258]">{item.title}</p><span className={`mt-1 inline-flex rounded-full px-1.5 py-0.5 text-[9px] font-extrabold ${item.unlocked ? "bg-[#E1F9B0] text-[#23411B]" : "bg-[#EEF2FF] text-[#3158C9]"}`}>{item.unlocked ? "✓" : `${item.current}/${item.target}`}</span></article>)}</div></section>;
+type AchievementShelfItem = {
+  id: keyof typeof achievementArt;
+  title: string;
+  description: string;
+  category: string;
+  current: number;
+  target: number;
+  unlocked: boolean;
+};
+
+function AchievementShelf({ achievements }: { achievements: AchievementShelfItem[] }) {
+  const [selectedAchievement, setSelectedAchievement] = useState<AchievementShelfItem | null>(null);
+  const progress = selectedAchievement ? Math.min(100, Math.round((selectedAchievement.current / Math.max(selectedAchievement.target, 1)) * 100)) : 0;
+  return <><section className="signal-surface overflow-hidden rounded-[1.55rem] p-4"><div className="flex items-center justify-between"><div><p className="journal-label">ПРИЗНАНИЕ</p><h2 className="mt-1 text-lg font-extrabold tracking-[-0.045em]">Достижения</h2></div><span className="signal-chip rounded-full px-2.5 py-1 text-[10px] font-extrabold">{achievements.filter(item => item.unlocked).length}/{achievements.length}</span></div><div className="mt-4 grid grid-cols-5 gap-1.5">{achievements.map(item => <button key={item.id} type="button" onClick={() => { telegramSelectionHaptic(); setSelectedAchievement(item); }} className="soft-press min-w-0 rounded-xl text-center outline-none focus-visible:ring-2 focus-visible:ring-[#316CFF]" aria-label={`${item.title}. ${item.unlocked ? "достижение подтверждено" : `прогресс ${item.current} из ${item.target}`}. Открыть детали`}><img src={achievementArt[item.id]} alt="" aria-hidden="true" draggable={false} data-locked={item.unlocked ? "false" : "true"} className="achievement-sticker mx-auto h-14 w-14 object-contain sm:h-[4.5rem] sm:w-[4.5rem]" /><p className="mt-1.5 line-clamp-2 min-h-7 text-[9px] font-bold leading-3 text-[#384258]">{item.title}</p><span className={`mt-1 inline-flex rounded-full px-1.5 py-0.5 text-[9px] font-extrabold ${item.unlocked ? "bg-[#E1F9B0] text-[#23411B]" : "bg-[#EEF2FF] text-[#3158C9]"}`}>{item.unlocked ? "✓" : `${item.current}/${item.target}`}</span></button>)}</div></section><Dialog open={Boolean(selectedAchievement)} onOpenChange={open => !open && setSelectedAchievement(null)}>{selectedAchievement && <DialogContent className="max-w-[calc(100%-2rem)] rounded-[1.75rem] border-0 bg-[#F8FAFF] p-0 shadow-2xl"><div className="px-5 pb-6 pt-7"><DialogHeader className="items-center text-center"><img src={achievementArt[selectedAchievement.id]} alt="" aria-hidden="true" data-locked={selectedAchievement.unlocked ? "false" : "true"} className="achievement-sticker h-24 w-24 object-contain" /><p className="mt-3 text-[10px] font-extrabold tracking-[0.15em] text-[#316CFF]">{selectedAchievement.category.toUpperCase()}</p><DialogTitle className="mt-1 text-2xl font-extrabold tracking-[-0.055em] text-[#17233D]">{selectedAchievement.title}</DialogTitle><DialogDescription className="mt-2 text-sm leading-5 text-[#566177]">{selectedAchievement.description}</DialogDescription></DialogHeader><div className="mt-6 rounded-2xl bg-white p-4"><div className="flex items-center justify-between gap-3"><p className="text-xs font-extrabold text-[#17233D]">{selectedAchievement.unlocked ? "Подтверждено P&C" : "Ваш прогресс"}</p><span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold ${selectedAchievement.unlocked ? "bg-[#E1F9B0] text-[#23411B]" : "bg-[#E8EEFF] text-[#3158C9]"}`}>{selectedAchievement.unlocked ? "Готово" : `${selectedAchievement.current}/${selectedAchievement.target}`}</span></div><Progress value={progress} className="mt-3 h-2 bg-[#E9EDF6] [&>div]:bg-[#316CFF]" /><p className="mt-3 text-xs leading-5 text-[#566177]">{selectedAchievement.unlocked ? "Условие выполнено и подтверждено. Так держать!" : `Чтобы получить бейдж, достигните ${selectedAchievement.target} ${selectedAchievement.target === 1 ? "подтверждённого результата" : "единиц прогресса"}.`}</p></div></div></DialogContent>}</Dialog></>;
 }
