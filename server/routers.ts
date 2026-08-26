@@ -10,9 +10,10 @@ import { notifyNewActivity, notifyNewPeriod, notifyRegistrationDecision, notifyR
 import { storagePut } from "./storage";
 import { createCurrentDataExport } from "./excelExport";
 import { verifyTelegramMiniAppInitData } from "./telegramMiniApp";
+import { getTelegramMiniAppWorkspaceRole } from "./telegramMiniAppAccess";
 import { getMiniAppStatistics } from "./statisticsDb";
 import { getSessionCookieOptions } from "./_core/cookies";
-import { createLocalAdminSession, localAdminUser, verifyAdminPassword } from "./_core/localAuth";
+import { createLocalAdminSession, createTelegramAdminSession, localAdminUser, verifyAdminPassword } from "./_core/localAuth";
 import { systemRouter } from "./_core/systemRouter";
 import { chiefProcedure, moderationProcedure, publicProcedure, router } from "./_core/trpc";
 
@@ -31,6 +32,16 @@ export const appRouter = router({
         ctx.res.cookie(COOKIE_NAME, session, { ...getSessionCookieOptions(ctx.req), maxAge: 365 * 24 * 60 * 60 * 1000 });
         return localAdminUser(input.role);
       }),
+    telegramWorkspace: publicProcedure
+      .input(z.object({ initData: z.string().min(1) }))
+      .mutation(async ({ input, ctx }) => {
+        const telegramUser = verifyTelegramMiniAppInitData(input.initData);
+        const role = await getTelegramMiniAppWorkspaceRole(String(telegramUser.id));
+        if (!role) throw new TRPCError({ code: "FORBIDDEN", message: "Рабочая панель доступна только Chief и P&C" });
+        const session = await createTelegramAdminSession(role, String(telegramUser.id));
+        ctx.res.cookie(COOKIE_NAME, session, { ...getSessionCookieOptions(ctx.req), maxAge: 365 * 24 * 60 * 60 * 1000 });
+        return localAdminUser(role, "telegram-mini-app");
+      }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
@@ -43,6 +54,16 @@ export const appRouter = router({
     dashboard: publicProcedure.input(z.object({ initData: z.string().min(1) })).query(({ input }) => {
       const user = verifyTelegramMiniAppInitData(input.initData);
       return getMiniAppStatistics(String(user.id));
+    }),
+  }),
+  miniApp: router({
+    access: publicProcedure.input(z.object({ initData: z.string().min(1) })).query(async ({ input }) => {
+      const telegramUser = verifyTelegramMiniAppInitData(input.initData);
+      const workspaceRole = await getTelegramMiniAppWorkspaceRole(String(telegramUser.id));
+      return {
+        participantName: [telegramUser.first_name, telegramUser.last_name].filter(Boolean).join(" ") || null,
+        workspaceRole,
+      };
     }),
   }),
 

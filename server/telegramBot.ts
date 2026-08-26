@@ -573,7 +573,7 @@ export async function syncTelegramIntegration(input: { webAppUrl: string | null;
   if (appUrl.protocol !== "https:") throw new Error("Telegram requires an HTTPS address for the Mini App");
   const webhookUrl = new URL("/api/telegram/webhook", appUrl).toString();
   const secretToken = getTelegramWebhookSecret(token());
-  const statisticsUrl = new URL("/statistics", appUrl).toString();
+  const statisticsUrl = new URL("/", appUrl).toString();
   await telegramApi<boolean>("setChatMenuButton", {
     menu_button: { type: "web_app", text: input.menuButtonText, web_app: { url: statisticsUrl } },
   });

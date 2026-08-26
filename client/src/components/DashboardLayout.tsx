@@ -21,10 +21,9 @@ import {
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
 import { CalendarRange, CheckSquare2, ClipboardCheck, Download, HeartHandshake, LayoutDashboard, LogOut, MessageCircleHeart, PanelLeft, Send, Settings, Sparkles, Users, UsersRound } from "lucide-react";
-import { CSSProperties, FormEvent, useEffect, useRef, useState } from "react";
+import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
-import { Button } from "./ui/button";
 import { VisibleDeedMark } from "./VisibleDeedMark";
 import { trpc } from "@/lib/trpc";
 import { applyTelegramSafeAreas, getTelegramWebApp, telegramSelectionHaptic, telegramSupportsVersion } from "@/lib/telegramNative";
@@ -57,10 +56,7 @@ export default function DashboardLayout({
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
-  const { loading, user, login } = useAuth();
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"admin" | "pc_admin">("admin");
-  const [loginError, setLoginError] = useState("");
+  const { loading, user } = useAuth();
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
@@ -70,29 +66,8 @@ export default function DashboardLayout({
     return <DashboardLayoutSkeleton />
   }
 
-  async function signIn(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setLoginError("");
-    try { await login(role, password); setPassword(""); }
-    catch { setLoginError("Не удалось войти: проверьте выбранную роль и пароль."); }
-  }
-
   if (!user) {
-    return (
-      <div className="paper-grain relative flex min-h-screen items-center justify-center overflow-hidden px-5 py-10">
-        <div className="float-slow absolute -left-24 top-12 h-64 w-64 rounded-full bg-[#D8EDBF] blur-3xl" />
-        <div className="absolute -right-20 bottom-0 h-80 w-80 rounded-[5rem] bg-[#BDE1EF] opacity-80 blur-3xl" />
-        <form onSubmit={signIn} className="relative w-full max-w-md rounded-[2rem] border border-white/70 bg-white/85 p-7 shadow-[0_30px_80px_-40px_rgba(31,73,48,0.45)] backdrop-blur sm:p-9">
-          <div className="flex items-start justify-between gap-4"><VisibleDeedMark /><span className="rounded-full bg-[#E8F3EE] px-3 py-1.5 text-[10px] font-extrabold tracking-[0.14em] text-[#25613F]">ДОБРЫЕ ДЕЛА</span></div>
-          <div className="mt-7"><p className="text-xs font-bold uppercase tracking-[0.15em] text-[#55705E]">пространство команды</p><h1 className="mt-2 text-3xl font-extrabold tracking-[-0.055em] text-[#163F2F]">Управляйте вкладом, который становится видимым</h1><p className="mt-3 text-sm leading-6 text-muted-foreground">Общий ритм начинается с одного доброго действия, а признание приходит после честной проверки P&amp;C.</p></div>
-          <div className="mt-6 grid grid-cols-3 gap-2 text-center text-[10px] font-extrabold uppercase tracking-[0.09em] text-[#55705E]"><span className="rounded-xl bg-[#F4F8F1] px-2 py-2">Создать</span><span className="rounded-xl bg-[#F4F8F1] px-2 py-2">Подтвердить</span><span className="rounded-xl bg-[#F4F8F1] px-2 py-2">Признать</span></div>
-          <div className="mt-7 w-full"><p className="mb-2 text-xs font-extrabold uppercase tracking-[0.12em] text-[#55705E]">Ваша роль</p><div className="grid grid-cols-2 gap-2"><Button type="button" variant={role === "admin" ? "default" : "outline"} className="soft-press rounded-xl" onClick={() => setRole("admin")}>Chief</Button><Button type="button" variant={role === "pc_admin" ? "default" : "outline"} className="soft-press rounded-xl" onClick={() => setRole("pc_admin")}>P&amp;C</Button></div></div>
-          <input type="password" value={password} onChange={event => setPassword(event.target.value)} className="mt-4 h-12 w-full rounded-xl border border-[#BFD7C5] bg-white px-4 text-sm shadow-inner" placeholder="Пароль" autoComplete="current-password" required />
-          {loginError && <p className="mt-3 w-full text-sm text-destructive">{loginError}</p>}
-          <Button type="submit" size="lg" className="soft-press mt-5 w-full rounded-xl bg-[#163F2F] shadow-lg hover:bg-[#215640]">Войти в пространство <Sparkles className="ml-2 h-4 w-4" /></Button>
-        </form>
-      </div>
-    );
+    return <div className="paper-grain flex min-h-screen items-center justify-center bg-[#F8FBF5] p-5 text-center"><div className="max-w-sm rounded-[2rem] bg-white p-7 shadow-[0_24px_55px_-38px_rgba(22,63,47,0.45)]"><VisibleDeedMark className="mx-auto bg-[#163F2F] text-white" /><p className="mt-6 text-[10px] font-extrabold tracking-[0.16em] text-[#55705E]">ДОБРЫЕ ДЕЛА</p><h1 className="mt-2 text-2xl font-extrabold tracking-[-0.05em]">Откройте рабочую панель из Telegram</h1><p className="mt-3 text-sm leading-6 text-muted-foreground">Доступ Chief и P&amp;C определяется по защищённым данным Telegram Mini App — пароль не требуется.</p></div></div>;
   }
 
   return (

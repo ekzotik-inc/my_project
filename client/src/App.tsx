@@ -16,12 +16,14 @@ import CommunicationRhythmPage from "./pages/CommunicationRhythmPage";
 import ExportsPage from "./pages/ExportsPage";
 import ReviewCenterPage from "./pages/ReviewCenterPage";
 import StatisticsPage from "./pages/StatisticsPage";
+import MiniAppGatewayPage from "./pages/MiniAppGatewayPage";
+import { useAuth } from "./_core/hooks/useAuth";
 
 function AdminShell({ children }: { children: React.ReactNode }) {
   return <DashboardLayout>{children}</DashboardLayout>;
 }
 
-function OverviewRoute() { return <AdminShell><AdminOverview /></AdminShell>; }
+function OverviewRoute() { const { user, loading } = useAuth(); if (loading) return <MiniAppGatewayPage />; if (!user) return <MiniAppGatewayPage />; return user.role === "pc_admin" ? <AdminShell><ReviewCenterPage /></AdminShell> : <AdminShell><AdminOverview /></AdminShell>; }
 function ParticipantsRoute() { return <AdminShell><ParticipantsPage /></AdminShell>; }
 function TeamsRoute() { return <AdminShell><TeamsPage /></AdminShell>; }
 function PeriodsRoute() { return <AdminShell><PeriodsPage /></AdminShell>; }
