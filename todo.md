@@ -155,3 +155,6 @@
 - [x] Заменить дёргающийся drag-follow swipe на mobile-first one-card gesture с плавным spring-завершением и компактной геометрией deck.
 - [x] Изучить Kod.ru и документировать переносимые mobile-паттерны publication cards, photo presentation, навигации и motion без копирования чужого бренда или серой палитры.
 - [x] Внедрить Kod.ru-inspired visual refresh для participant gallery и связанных mobile surfaces в кобальт-лайм-коррал theme.
+- [x] Провести целостный mobile visual redesign participant Mini App: убрать избыточные white cards, pastel-обводки и конкурирующие акценты.
+- [x] Ввести единую строгую hierarchy: спокойный warm base, cobalt только для primary actions, lime только для подтверждения, coral только для внимания.
+- [x] Перестроить progress, activity feed, gallery и нижнюю навигацию в согласованные плотные mobile surfaces с приоритетом контента.
