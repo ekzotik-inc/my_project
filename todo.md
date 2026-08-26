@@ -158,3 +158,7 @@
 - [x] Провести целостный mobile visual redesign participant Mini App: убрать избыточные white cards, pastel-обводки и конкурирующие акценты.
 - [x] Ввести единую строгую hierarchy: спокойный warm base, cobalt только для primary actions, lime только для подтверждения, coral только для внимания.
 - [x] Перестроить progress, activity feed, gallery и нижнюю навигацию в согласованные плотные mobile surfaces с приоритетом контента.
+- [x] Собрать и оценить конкретные GitHub reference projects для Telegram Mini Apps, photo/community mobile UX и production-ready React patterns.
+- [x] Найти и оценить open-source design agents/repositories для design review и design-to-code workflow следующего redesign.
+- [x] Зафиксировать собственный DESIGN.md для «Добрых дел» как обязательный contract следующего redesign.
+- [x] Документировать tma.js guardrails и privacy-safe screenshot-to-code prototype process без реальных participant data.
