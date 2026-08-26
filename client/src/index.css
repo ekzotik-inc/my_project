@@ -141,9 +141,21 @@
   .journal-label { color: #316CFF; font-size: 0.625rem; font-weight: 800; letter-spacing: 0.16em; }
   .signal-surface { border: 1px solid oklch(0.56 0.22 262 / 13%); background: linear-gradient(145deg, #FFFFFF, #F5F7FF); box-shadow: 0 18px 45px -36px rgb(49 108 255 / 34%); }
   .signal-chip { background: #EEF2FF; color: #3158C9; border: 1px solid #DCE4FF; }
-  .achievement-sticker { filter: saturate(1.05) drop-shadow(0 9px 12px rgb(49 108 255 / 17%)); transition: transform 180ms cubic-bezier(0.23, 1, 0.32, 1), filter 180ms cubic-bezier(0.23, 1, 0.32, 1); }
+  .achievement-sticker { filter: saturate(1.05) drop-shadow(0 7px 9px rgb(49 108 255 / 18%)); transition: transform 180ms cubic-bezier(0.23, 1, 0.32, 1), filter 180ms cubic-bezier(0.23, 1, 0.32, 1); }
   .achievement-sticker[data-locked="true"] { filter: grayscale(1) opacity(.42); }
   .achievement-sticker[data-locked="true"]:hover { filter: grayscale(.4) opacity(.68); }
+  .achievement-badge-frame { position: relative; display: grid; width: 3.7rem; height: 3.7rem; place-items: center; overflow: hidden; border: 1px solid rgb(49 108 255 / 16%); border-radius: 999px; background: radial-gradient(circle at 32% 22%, rgb(255 255 255 / 96%), rgb(235 240 255 / 82%) 58%, rgb(224 232 255 / 80%)); box-shadow: inset 0 1px 0 rgb(255 255 255 / 88%), 0 8px 18px -14px rgb(49 108 255 / 54%); transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1), border-color 200ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 200ms cubic-bezier(0.23, 1, 0.32, 1); }
+  .achievement-badge-frame::after { position: absolute; inset: 5px; border: 1px solid rgb(255 255 255 / 72%); border-radius: inherit; content: ""; pointer-events: none; }
+  .achievement-badge-frame .achievement-sticker { position: relative; z-index: 1; width: 78%; height: 78%; }
+  .achievement-badge-frame[data-locked="true"] { border-color: rgb(100 112 142 / 14%); background: radial-gradient(circle at 32% 22%, rgb(255 255 255 / 92%), rgb(241 243 249 / 88%) 62%, rgb(229 232 239 / 82%)); box-shadow: inset 0 1px 0 rgb(255 255 255 / 90%), 0 8px 18px -14px rgb(53 62 88 / 28%); }
+  .achievement-detail-frame { width: 6.35rem; height: 6.35rem; }
+  .achievement-badge-card:hover .achievement-badge-frame { transform: translate3d(0, -2px, 0) rotate(-2deg); border-color: rgb(49 108 255 / 34%); box-shadow: inset 0 1px 0 rgb(255 255 255 / 92%), 0 15px 24px -18px rgb(49 108 255 / 62%); }
+  .achievement-badge-card:active .achievement-badge-frame { transform: scale(.95) rotate(0deg); }
+  .achievement-category { transition: transform 220ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 220ms cubic-bezier(0.23, 1, 0.32, 1), border-color 220ms cubic-bezier(0.23, 1, 0.32, 1); }
+  .achievement-category[data-state="open"] { border-color: rgb(49 108 255 / 22%); box-shadow: 0 16px 26px -24px rgb(49 108 255 / 66%); }
+  .achievement-category[data-state="open"] .achievement-grid { animation: achievement-grid-in 260ms cubic-bezier(0.23, 1, 0.32, 1) both; }
+  .achievement-category[data-state="open"] .achievement-badge-card { animation: achievement-badge-in 300ms cubic-bezier(0.23, 1, 0.32, 1) both; animation-delay: calc(var(--achievement-stagger) * 38ms); }
+  .achievement-detail-sheet[data-state="open"] { animation: achievement-sheet-in 260ms cubic-bezier(0.23, 1, 0.32, 1) both; }
   .achievement-ring { background: conic-gradient(#316CFF var(--achievement-progress), #E8ECF8 0); }
   .bg-\[\#163F2F\] { background-color: #182035 !important; }
   .text-\[\#163F2F\] { color: #182035 !important; }
@@ -185,6 +197,21 @@
   to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
+@keyframes achievement-grid-in {
+  from { opacity: 0; transform: translate3d(0, 6px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes achievement-badge-in {
+  from { opacity: 0; transform: translate3d(0, 10px, 0) scale(.94); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes achievement-sheet-in {
+  from { opacity: 0; transform: translate3d(0, 14px, 0) scale(.97); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
 }
