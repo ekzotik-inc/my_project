@@ -153,3 +153,5 @@
 - [x] Удалить техническую performance-подсказку из нижней части participant gallery, сохранив саму оптимизированную реализацию.
 - [ ] Сделать swipe gallery намеренным: direction lock, высокая drag-дистанция/velocity threshold и tap без смены карточки.
 - [x] Заменить дёргающийся drag-follow swipe на mobile-first one-card gesture с плавным spring-завершением и компактной геометрией deck.
+- [x] Изучить Kod.ru и документировать переносимые mobile-паттерны publication cards, photo presentation, навигации и motion без копирования чужого бренда или серой палитры.
+- [x] Внедрить Kod.ru-inspired visual refresh для participant gallery и связанных mobile surfaces в кобальт-лайм-коррал theme.
