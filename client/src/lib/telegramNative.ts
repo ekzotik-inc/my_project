@@ -23,6 +23,7 @@ export type TelegramWebApp = {
   setBackgroundColor?: (color: string) => void;
   setBottomBarColor?: (color: string) => void;
   disableVerticalSwipes?: () => void;
+  enableVerticalSwipes?: () => void;
   requestFullscreen?: () => void;
   onEvent?: (event: "safeAreaChanged" | "contentSafeAreaChanged" | "fullscreenChanged", callback: () => void) => void;
   offEvent?: (event: "safeAreaChanged" | "contentSafeAreaChanged" | "fullscreenChanged", callback: () => void) => void;
@@ -37,6 +38,21 @@ export type TelegramWebApp = {
 export function getTelegramWebApp(): TelegramWebApp | undefined {
   if (typeof window === "undefined") return undefined;
   return (window as unknown as { Telegram?: { WebApp?: TelegramWebApp } }).Telegram?.WebApp;
+}
+
+export function telegramSupportsVersion(app: TelegramWebApp | undefined, minimum: string) {
+  if (!app) return false;
+  if (app.isVersionAtLeast) return app.isVersionAtLeast(minimum);
+  if (!app.version) return false;
+  const currentParts = app.version.split(".").map(Number);
+  const minimumParts = minimum.split(".").map(Number);
+  const length = Math.max(currentParts.length, minimumParts.length);
+  for (let index = 0; index < length; index += 1) {
+    const current = currentParts[index] ?? 0;
+    const required = minimumParts[index] ?? 0;
+    if (current !== required) return current > required;
+  }
+  return true;
 }
 
 export function telegramSelectionHaptic() {

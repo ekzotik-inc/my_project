@@ -5,18 +5,30 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useIsMobile } from "@/hooks/useMobile";
+import { telegramImpact, telegramSelectionHaptic } from "@/lib/telegramNative";
 import { trpc } from "@/lib/trpc";
 import { CheckSquare2, CirclePlus, GripVertical, ImagePlus, Minus, Sparkles, X } from "lucide-react";
 import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 type StepDraft = { instruction: string; inputType: "photo" | "file" | "text" | "mixed"; isRequired: boolean };
+
 const blankStep = (): StepDraft => ({ instruction: "", inputType: "mixed", isRequired: true });
 const inputLabels = { photo: "Только фото", file: "Файл или фото", text: "Только текст", mixed: "Любой формат" } as const;
-function readAsDataUrl(file: File) { return new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(new Error("Не удалось прочитать файл")); reader.readAsDataURL(file); }); }
+
+function readAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Не удалось прочитать файл"));
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function ActivitiesPage() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const utils = trpc.useUtils();
   const { data: periods } = trpc.admin.periods.list.useQuery(undefined, { enabled: user?.role === "admin" });
   const { data: activities, isLoading } = trpc.admin.activities.list.useQuery(undefined, { enabled: user?.role === "admin" });
@@ -27,20 +39,109 @@ export default function ActivitiesPage() {
   const [points, setPoints] = useState("20");
   const [steps, setSteps] = useState<StepDraft[]>([blankStep(), blankStep(), blankStep()]);
   const [image, setImage] = useState<{ key: string; url: string; preview: string } | null>(null);
+
   const upload = trpc.admin.media.upload.useMutation({ onError: error => toast.error(error.message) });
-  useEffect(() => { if (defaultPeriod && !periodId) setPeriodId(String(defaultPeriod)); }, [defaultPeriod, periodId]);
   const create = trpc.admin.activities.create.useMutation({
     onSuccess: async result => {
-      setTitle(""); setDescription(""); setPoints("20"); setSteps([blankStep(), blankStep(), blankStep()]); setImage(null);
+      setTitle("");
+      setDescription("");
+      setPoints("20");
+      setSteps([blankStep(), blankStep(), blankStep()]);
+      setImage(null);
+      telegramImpact("medium");
       await Promise.all([utils.admin.activities.list.invalidate(), utils.admin.periods.list.invalidate(), utils.admin.overview.invalidate()]);
       toast.success(`Задание опубликовано для ${result.assignedCount} участников. Уведомления доставлены: ${result.notifiedCount}.`);
     },
     onError: error => toast.error(error.message),
   });
-  if (user?.role !== "admin") return <AdminAccessNotice />;
-  function setStep(index: number, patch: Partial<StepDraft>) { setSteps(current => current.map((step, position) => position === index ? { ...step, ...patch } : step)); }
-  async function uploadImage(event: ChangeEvent<HTMLInputElement>) { const file = event.target.files?.[0]; if (!file) return; if (!file.type.startsWith("image/")) return toast.error("Выберите файл изображения"); try { const base64 = await readAsDataUrl(file); const stored = await upload.mutateAsync({ name: file.name, mimeType: file.type, base64 }); setImage({ ...stored, preview: base64 }); } catch (error) { if (error instanceof Error) toast.error(error.message); } }
-  function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); if (!periodId) return toast.error("Сначала создайте период активности"); create.mutate({ periodId: Number(periodId), title, description, points: Number(points), coverImageKey: image?.key || null, coverImageUrl: image?.url || null, steps }); }
 
-  return <div className="mx-auto max-w-7xl space-y-7 px-1 py-4 sm:px-5 sm:py-7"><header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[11px] font-bold tracking-[0.14em] text-muted-foreground">ОБЩЕЕ ЗАДАНИЕ НЕДЕЛИ</p><h1 className="mt-2 text-4xl font-extrabold tracking-[-0.055em]">Активности</h1><p className="mt-3 max-w-2xl text-sm text-muted-foreground">Каждое опубликованное задание сразу назначается всем одобренным участникам текущего периода. Баллы не начисляются до проверки отчёта.</p></div><div className="flex items-center gap-2 rounded-2xl bg-[#F5EDE0] px-4 py-3 text-sm font-bold"><CheckSquare2 className="h-4 w-4" /> {activities?.length ?? 0} опубликовано</div></header><div className="grid gap-5 xl:grid-cols-[0.82fr_1.18fr]"><form onSubmit={submit} className="rounded-[1.65rem] bg-[#E8F3EE] p-6 sm:p-7"><div className="flex items-center justify-between"><div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/80"><Sparkles className="h-4 w-4" /></div><Badge className="border-0 bg-white/75 text-black hover:bg-white/75">Для всех участников</Badge></div><h2 className="mt-5 text-xl font-extrabold tracking-[-0.04em]">Новое задание</h2><label className="mt-6 block text-xs font-bold">Период<Select value={periodId} onValueChange={setPeriodId}><SelectTrigger className="mt-2 h-11 rounded-xl border-black/10 bg-white"><SelectValue placeholder="Выберите период" /></SelectTrigger><SelectContent>{periods?.map(period => <SelectItem key={period.id} value={String(period.id)}>{period.title} · {period.status === "active" ? "активен" : "черновик"}</SelectItem>)}</SelectContent></Select></label><label className="mt-4 block text-xs font-bold">Название<Input value={title} onChange={event => setTitle(event.target.value)} required maxLength={200} className="mt-2 h-11 rounded-xl border-black/10 bg-white" placeholder="Например, Командный пикник" /></label><label className="mt-4 block text-xs font-bold">Описание<Textarea value={description} onChange={event => setDescription(event.target.value)} required maxLength={8000} className="mt-2 min-h-28 rounded-xl border-black/10 bg-white" placeholder="Расскажите, что нужно сделать, когда и с кем." /></label><div className="mt-4 grid grid-cols-2 gap-3"><label className="block text-xs font-bold">Баллы за подтверждённое выполнение<Input type="number" min="0" step="1" value={points} onChange={event => setPoints(event.target.value)} required className="mt-2 h-11 rounded-xl border-black/10 bg-white" /></label><div><p className="text-xs font-bold">Обложка <span className="font-normal text-muted-foreground">(до 5 МБ)</span></p><label className="mt-2 flex h-11 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-dashed border-black/15 bg-white text-xs font-bold"><ImagePlus className="h-3.5 w-3.5" />{upload.isPending ? "Загрузка…" : image ? "Заменить" : "Добавить"}<input onChange={uploadImage} type="file" accept="image/*" className="hidden" /></label></div></div>{image && <div className="relative mt-3"><img src={image.preview} alt="Обложка задания" className="h-28 w-full rounded-2xl object-cover" /><button type="button" onClick={() => setImage(null)} className="absolute right-2 top-2 rounded-full bg-white/90 p-1.5"><X className="h-3.5 w-3.5" /></button></div>}<div className="mt-6 border-t border-black/10 pt-5"><div className="flex items-center justify-between"><div><p className="text-xs font-bold">Шаги выполнения</p><p className="mt-1 text-xs text-[#486050]">Администратор задаёт требования к каждому шагу.</p></div><Button type="button" variant="ghost" onClick={() => setSteps(current => [...current, blankStep()])} className="h-9 rounded-xl px-3 text-xs font-bold"><CirclePlus className="mr-1.5 h-3.5 w-3.5" />Шаг</Button></div><div className="mt-4 space-y-3">{steps.map((step, index) => <div key={index} className="rounded-2xl bg-white/75 p-3"><div className="flex items-center gap-2"><GripVertical className="h-4 w-4 shrink-0 text-muted-foreground" /><span className="text-xs font-extrabold">Шаг {index + 1}</span><label className="ml-auto flex items-center gap-1.5 text-[11px] font-bold"><input type="checkbox" checked={step.isRequired} onChange={event => setStep(index, { isRequired: event.target.checked })} />Обязателен</label>{steps.length > 1 && <button type="button" onClick={() => setSteps(current => current.filter((_, position) => position !== index))} className="ml-1 rounded-lg p-1.5 text-muted-foreground hover:bg-black/5"><Minus className="h-3.5 w-3.5" /></button>}</div><Input value={step.instruction} onChange={event => setStep(index, { instruction: event.target.value })} required className="mt-2 h-10 rounded-xl border-black/10 bg-white" placeholder="Например, приложите фото команды на природе" /><Select value={step.inputType} onValueChange={value => setStep(index, { inputType: value as StepDraft["inputType"] })}><SelectTrigger className="mt-2 h-9 rounded-xl border-black/10 bg-white text-xs"><SelectValue /></SelectTrigger><SelectContent>{Object.entries(inputLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select></div>)}</div></div><Button type="submit" disabled={create.isPending || upload.isPending || !periodId} className="mt-6 h-11 w-full rounded-xl bg-black font-bold text-white hover:bg-black/85">Опубликовать и назначить всем</Button></form><section className="rounded-[1.65rem] border border-black/[0.055] bg-card p-6 sm:p-7"><div><p className="text-[11px] font-bold tracking-[0.14em] text-muted-foreground">УЖЕ ОПУБЛИКОВАНО</p><h2 className="mt-2 text-xl font-extrabold tracking-[-0.04em]">Задания текущих периодов</h2></div><div className="mt-6 space-y-3">{isLoading ? <p className="text-sm text-muted-foreground">Загрузка заданий…</p> : activities?.length ? activities.map(activity => <article key={activity.id} className="overflow-hidden rounded-2xl bg-[#F4F6F7] p-5">{activity.coverImageUrl && <img src={activity.coverImageUrl} alt="" className="mb-4 h-28 w-full rounded-xl object-cover" />}<div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[10px] font-bold tracking-[0.12em] text-muted-foreground">{activity.periodTitle.toUpperCase()}</p><h3 className="mt-1.5 text-lg font-extrabold tracking-[-0.035em]">{activity.title}</h3></div><Badge className="border-0 bg-[#F5EDE0] text-black hover:bg-[#F5EDE0]">{activity.points} баллов</Badge></div><p className="mt-3 line-clamp-2 text-sm leading-6 text-muted-foreground">{activity.description}</p><div className="mt-4 flex items-center gap-2"><Badge variant="secondary" className="rounded-full">{activity.status === "published" ? "Назначено всем" : activity.status}</Badge><span className="text-xs text-muted-foreground">Порядок: {activity.displayOrder + 1}</span></div></article>) : <div className="rounded-2xl border border-dashed border-black/10 px-5 py-16 text-center text-sm text-muted-foreground">Пока нет опубликованных заданий.</div>}</div></section></div></div>;
+  useEffect(() => {
+    if (defaultPeriod && !periodId) setPeriodId(String(defaultPeriod));
+  }, [defaultPeriod, periodId]);
+
+  if (user?.role !== "admin") return <AdminAccessNotice />;
+
+  const setStep = (index: number, patch: Partial<StepDraft>) => {
+    setSteps(current => current.map((step, position) => position === index ? { ...step, ...patch } : step));
+  };
+
+  async function uploadImage(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return toast.error("Выберите файл изображения");
+    try {
+      const base64 = await readAsDataUrl(file);
+      const stored = await upload.mutateAsync({ name: file.name, mimeType: file.type, base64 });
+      telegramImpact("light");
+      setImage({ ...stored, preview: base64 });
+    } catch (error) {
+      if (error instanceof Error) toast.error(error.message);
+    }
+  }
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!periodId) return toast.error("Сначала создайте период активности");
+    telegramImpact("medium");
+    create.mutate({ periodId: Number(periodId), title, description, points: Number(points), coverImageKey: image?.key || null, coverImageUrl: image?.url || null, steps });
+  }
+
+  return <div className="mx-auto max-w-7xl space-y-6 px-1 py-4 sm:px-5 sm:py-7">
+    <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p className="text-[11px] font-bold tracking-[0.14em] text-muted-foreground">ОБЩЕЕ ЗАДАНИЕ НЕДЕЛИ</p>
+        <h1 className="mt-2 text-4xl font-extrabold tracking-[-0.055em]">Активности</h1>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Каждое опубликованное задание сразу назначается всем одобренным участникам периода. Баллы появятся только после решения P&amp;C.</p>
+      </div>
+      <div className="flex items-center gap-2 rounded-2xl bg-[#F5EDE0] px-4 py-3 text-sm font-bold"><CheckSquare2 className="h-4 w-4" /> {activities?.length ?? 0} опубликовано</div>
+    </header>
+
+    <div className="grid gap-5 xl:grid-cols-[0.82fr_1.18fr]">
+      <form onSubmit={submit} className="rounded-[1.65rem] bg-[#E8F3EE] p-5 sm:p-7">
+        <div className="flex items-center justify-between">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/80"><Sparkles className="h-4 w-4" /></div>
+          <Badge className="border-0 bg-white/75 text-black hover:bg-white/75">Для всех участников</Badge>
+        </div>
+        <h2 className="mt-5 text-xl font-extrabold tracking-[-0.04em]">Новое задание</h2>
+
+        <label className="mt-6 block text-xs font-bold">Период
+          <Select value={periodId} onValueChange={setPeriodId}>
+            <SelectTrigger className="mt-2 h-12 rounded-xl border-black/10 bg-white"><SelectValue placeholder="Выберите период" /></SelectTrigger>
+            <SelectContent>{periods?.map(period => <SelectItem key={period.id} value={String(period.id)}>{period.title} · {period.status === "active" ? "активен" : "черновик"}</SelectItem>)}</SelectContent>
+          </Select>
+        </label>
+        <label className="mt-4 block text-xs font-bold">Название
+          <Input value={title} onChange={event => setTitle(event.target.value)} required maxLength={200} className="mt-2 h-12 rounded-xl border-black/10 bg-white" placeholder="Например, Командный пикник" />
+        </label>
+        <label className="mt-4 block text-xs font-bold">Описание
+          <Textarea value={description} onChange={event => setDescription(event.target.value)} required maxLength={8000} className="mt-2 min-h-32 rounded-xl border-black/10 bg-white" placeholder="Расскажите, что нужно сделать, когда и с кем." />
+        </label>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <label className="block text-xs font-bold">Баллы за подтверждённое выполнение
+            <Input type="number" min="0" step="1" value={points} onChange={event => setPoints(event.target.value)} required className="mt-2 h-12 rounded-xl border-black/10 bg-white" />
+          </label>
+          <div><p className="text-xs font-bold">Обложка <span className="font-normal text-muted-foreground">(до 5 МБ)</span></p>
+            <label className="mt-2 flex h-12 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-dashed border-black/15 bg-white text-xs font-bold"><ImagePlus className="h-3.5 w-3.5" />{upload.isPending ? "Загрузка…" : image ? "Заменить" : "Добавить"}<input onChange={uploadImage} type="file" accept="image/*" className="hidden" /></label>
+          </div>
+        </div>
+
+        {image && <div className="relative mt-3"><img src={image.preview} alt="Обложка задания" className="h-32 w-full rounded-2xl object-cover" /><button type="button" onClick={() => { telegramImpact("light"); setImage(null); }} className="soft-press absolute right-2 top-2 rounded-full bg-white/90 p-2" aria-label="Удалить обложку"><X className="h-3.5 w-3.5" /></button></div>}
+
+        <div className="mt-6 border-t border-black/10 pt-5">
+          <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-bold">Шаги выполнения</p><p className="mt-1 text-xs text-[#486050]">Понятный шаг — понятный результат на проверке.</p></div><Button type="button" variant="ghost" onClick={() => { telegramSelectionHaptic(); setSteps(current => [...current, blankStep()]); }} className="h-10 shrink-0 rounded-xl px-3 text-xs font-bold"><CirclePlus className="mr-1.5 h-3.5 w-3.5" />Шаг</Button></div>
+          <div className="mt-4 space-y-3">{steps.map((step, index) => <div key={index} className="rounded-2xl bg-white/75 p-3">
+            <div className="flex items-center gap-2"><GripVertical className="h-4 w-4 shrink-0 text-muted-foreground" /><span className="text-xs font-extrabold">Шаг {index + 1}</span><label className="ml-auto flex items-center gap-1.5 text-[11px] font-bold"><input type="checkbox" checked={step.isRequired} onChange={event => setStep(index, { isRequired: event.target.checked })} />Обязателен</label>{steps.length > 1 && <button type="button" onClick={() => { telegramSelectionHaptic(); setSteps(current => current.filter((_, position) => position !== index)); }} className="soft-press ml-1 rounded-lg p-2 text-muted-foreground hover:bg-black/5" aria-label={`Удалить шаг ${index + 1}`}><Minus className="h-3.5 w-3.5" /></button>}</div>
+            <Input value={step.instruction} onChange={event => setStep(index, { instruction: event.target.value })} required className="mt-2 h-11 rounded-xl border-black/10 bg-white" placeholder="Например, приложите фото команды на природе" />
+            <Select value={step.inputType} onValueChange={value => setStep(index, { inputType: value as StepDraft["inputType"] })}><SelectTrigger className="mt-2 h-10 rounded-xl border-black/10 bg-white text-xs"><SelectValue /></SelectTrigger><SelectContent>{Object.entries(inputLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select>
+          </div>)}</div>
+        </div>
+        <div className={isMobile ? "sticky bottom-[calc(0.6rem+var(--tg-safe-bottom))] z-20 -mx-2 mt-6 rounded-2xl bg-[#E8F3EE]/95 p-2 backdrop-blur" : "mt-6"}><Button type="submit" disabled={create.isPending || upload.isPending || !periodId} className="h-12 w-full rounded-xl bg-black font-bold text-white hover:bg-black/85">Опубликовать и назначить всем</Button></div>
+      </form>
+
+      <section className="rounded-[1.65rem] border border-black/[0.055] bg-card p-5 sm:p-7">
+        <div><p className="text-[11px] font-bold tracking-[0.14em] text-muted-foreground">УЖЕ ОПУБЛИКОВАНО</p><h2 className="mt-2 text-xl font-extrabold tracking-[-0.04em]">Задания текущих периодов</h2></div>
+        <div className="mt-6 space-y-3">{isLoading ? <p className="text-sm text-muted-foreground">Загрузка заданий…</p> : activities?.length ? activities.map(activity => <article key={activity.id} className="overflow-hidden rounded-2xl bg-[#F4F6F7] p-5">{activity.coverImageUrl && <img src={activity.coverImageUrl} alt="" className="mb-4 h-28 w-full rounded-xl object-cover" />}<div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[10px] font-bold tracking-[0.12em] text-muted-foreground">{activity.periodTitle.toUpperCase()}</p><h3 className="mt-1.5 text-lg font-extrabold tracking-[-0.035em]">{activity.title}</h3></div><Badge className="border-0 bg-[#F5EDE0] text-black hover:bg-[#F5EDE0]">{activity.points} баллов</Badge></div><p className="mt-3 line-clamp-2 text-sm leading-6 text-muted-foreground">{activity.description}</p><div className="mt-4 flex items-center gap-2"><Badge variant="secondary" className="rounded-full">{activity.status === "published" ? "Назначено всем" : activity.status}</Badge><span className="text-xs text-muted-foreground">Порядок: {activity.displayOrder + 1}</span></div></article>) : <div className="rounded-2xl border border-dashed border-black/10 px-5 py-16 text-center text-sm text-muted-foreground">Пока нет опубликованных заданий.</div>}</div>
+      </section>
+    </div>
+  </div>;
 }

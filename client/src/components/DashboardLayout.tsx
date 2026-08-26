@@ -27,6 +27,8 @@ import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 import { VisibleDeedMark } from "./VisibleDeedMark";
 import { trpc } from "@/lib/trpc";
+import { applyTelegramSafeAreas, getTelegramWebApp, telegramSelectionHaptic, telegramSupportsVersion } from "@/lib/telegramNative";
+import { mobileAdminQuickPaths } from "@/lib/mobileAdminNavigation";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Обзор", path: "/", access: "chief" },
@@ -129,6 +131,35 @@ function DashboardLayoutContent({
   const canModerate = user?.role === "admin" || user?.role === "pc_admin";
   const { data: reviewCenter } = trpc.admin.reviewCenter.dashboard.useQuery(undefined, { enabled: canModerate });
   const awaitingReview = reviewCenter?.summary.awaitingReview ?? 0;
+  const mobileQuickItems = mobileAdminQuickPaths(user?.role).flatMap(path => {
+    const item = menuItems.find(menuItem => menuItem.path === path);
+    return item ? [item] : [];
+  });
+
+  useEffect(() => {
+    const app = getTelegramWebApp();
+    if (!app) return;
+    const background = app.themeParams?.bg_color || "#F8FBF5";
+    app.ready();
+    app.expand();
+    if (telegramSupportsVersion(app, "6.1")) {
+      app.setHeaderColor?.(background);
+      app.setBackgroundColor?.(background);
+    }
+    if (telegramSupportsVersion(app, "7.10")) app.setBottomBarColor?.(background);
+    applyTelegramSafeAreas(app);
+    const updateSafeAreas = () => applyTelegramSafeAreas(app);
+    if (telegramSupportsVersion(app, "8.0")) {
+      app.onEvent?.("safeAreaChanged", updateSafeAreas);
+      app.onEvent?.("contentSafeAreaChanged", updateSafeAreas);
+    }
+    return () => {
+      if (telegramSupportsVersion(app, "8.0")) {
+        app.offEvent?.("safeAreaChanged", updateSafeAreas);
+        app.offEvent?.("contentSafeAreaChanged", updateSafeAreas);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (isCollapsed) {
@@ -259,7 +290,7 @@ function DashboardLayoutContent({
 
       <SidebarInset>
         {isMobile && (
-          <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
+          <div className="flex h-14 items-center justify-between border-b bg-background/95 px-2 pt-[var(--tg-safe-top)] backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" />
               <div className="flex items-center gap-3">
@@ -272,7 +303,14 @@ function DashboardLayoutContent({
             </div>
           </div>
         )}
-        <main className="flex-1 p-4 sm:p-5">{children}</main>
+        <main className={`flex-1 p-4 sm:p-5 ${isMobile ? "pb-[calc(6.5rem+var(--tg-safe-bottom))]" : ""}`}>{children}</main>
+        {isMobile ? <nav className="fixed inset-x-3 bottom-[calc(0.65rem+var(--tg-safe-bottom))] z-50 flex items-center rounded-[1.35rem] border border-white/75 bg-white/95 p-1.5 shadow-[0_20px_45px_-26px_rgba(22,63,47,0.5)] backdrop-blur" aria-label="Быстрые действия">
+          {mobileQuickItems.map(item => {
+            const active = location === item.path;
+            return <button key={item.path} onClick={() => { telegramSelectionHaptic(); setLocation(item.path); }} className={`soft-press relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[10px] font-extrabold ${active ? "bg-[#163F2F] text-white" : "text-[#587065]"}`}><item.icon className="h-4 w-4" />{item.label}{item.badge && awaitingReview > 0 ? <span className="absolute right-[17%] top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-[#C9474F] px-1 py-0.5 text-[8px] font-extrabold leading-none text-white">{awaitingReview > 99 ? "99+" : awaitingReview}</span> : null}</button>;
+          })}
+          <button onClick={() => { telegramSelectionHaptic(); toggleSidebar(); }} className="soft-press flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[10px] font-extrabold text-[#587065]"><PanelLeft className="h-4 w-4" />Меню</button>
+        </nav> : null}
       </SidebarInset>
     </>
   );
