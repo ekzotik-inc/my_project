@@ -128,18 +128,3 @@ export async function storageGetSignedUrl(relKey: string): Promise<string> {
   const { url } = (await resp.json()) as { url: string };
   return url;
 }
-
-export async function storageRead(relKey: string): Promise<{ data: Buffer; contentType: string }> {
-  const key = normalizeKey(relKey);
-  if (useExternalStorage()) {
-    const object = await getExternalClient().send(new GetObjectCommand({ Bucket: ENV.storageBucket, Key: key }));
-    if (!object.Body) throw new Error("Storage object has no body");
-    const bytes = await object.Body.transformToByteArray();
-    return { data: Buffer.from(bytes), contentType: object.ContentType || "application/octet-stream" };
-  }
-
-  const signedUrl = await storageGetSignedUrl(key);
-  const source = await fetch(signedUrl);
-  if (!source.ok) throw new Error(`Storage read failed (${source.status})`);
-  return { data: Buffer.from(await source.arrayBuffer()), contentType: source.headers.get("content-type") || "application/octet-stream" };
-}
