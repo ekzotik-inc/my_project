@@ -1,43 +1,47 @@
 export type DesignDirection = {
-  id: "quiet" | "signal" | "field";
+  id: "editorial" | "signal" | "mosaic";
   label: string;
   name: string;
   premise: string;
   strength: string;
   risk: string;
-  hero: string;
-  action: string;
+  typography: string;
+  layout: string;
+  navigation: string;
 };
 
 export const designDirections: DesignDirection[] = [
   {
-    id: "quiet",
+    id: "editorial",
     label: "01",
-    name: "Quiet Editorial",
-    premise: "Спокойная editorial-подача: один главный результат, много воздуха и фото как смысловой центр.",
-    strength: "Лучше всего для долгого ежедневного использования и ясной иерархии.",
-    risk: "Требует дисциплины: нельзя возвращать лишние цветные карточки.",
-    hero: "12 подтверждённых дел",
-    action: "Продолжить путь",
+    name: "Impact Journal",
+    premise: "Личный маршрут как спокойный журнал вклада: крупное число, линейная хронология и один доказанный момент недели.",
+    strength: "Даёт больше смысла и воздуха: человек читает свою историю, а не сканирует dashboard.",
+    risk: "Подходит, только если дисциплинированно сохранять один главный результат и не возвращать сетку равнозначных KPI.",
+    typography: "Serif display + спокойный sans-serif текст",
+    layout: "Вертикальная хронология, full-bleed photo chapter, CTA как завершающая строка",
+    navigation: "Тонкая текстовая нижняя рейка без отдельной яркой капсулы",
   },
   {
     id: "signal",
     label: "02",
-    name: "Cobalt Signal",
-    premise: "Более собранный, контрастный mobile product: чёткие статусы, уверенный primary action и плотная навигация.",
-    strength: "Лучше всего для активного цикла заданий и быстрых решений в Mini App.",
-    risk: "Нужен жёсткий лимит cobalt: он остаётся только сигналом, а не фоном для всего.",
-    hero: "Следующий шаг готов",
-    action: "Открыть задание",
+    name: "Action Console",
+    premise: "Telegram-native рабочая консоль: status bar, одна задача в фокусе, измеримые метрики и большая нижняя команда.",
+    strength: "Лучший вариант для регулярного прохождения заданий: следующий шаг и состояние считываются за секунды.",
+    risk: "Нужно удержать тон дружелюбным: данные и status signals не должны превращать добрые дела в сухой трекер.",
+    typography: "Точная grotesk type + tabular цифры и короткие labels",
+    layout: "Command module, progress rail, data cells и sticky action dock",
+    navigation: "Компактная icon rail с отдельной строкой текущего раздела",
   },
   {
-    id: "field",
+    id: "mosaic",
     label: "03",
-    name: "Field Notes",
-    premise: "Тёплый human-first журнал команды: фактура, фотографии и короткие истории, но без декоративного шума.",
-    strength: "Лучше всего раскрывает живые моменты команды и фотогалерею.",
-    risk: "Не должен превращаться в «бумажный» эффект; контраст и чтение остаются приоритетом.",
-    hero: "Команда в действии",
-    action: "Смотреть моменты",
+    name: "Community Mosaic",
+    premise: "Участие как живая мозаика команды: фотографии и общие жесты идут первыми, а прогресс собран в human-friendly pulse.",
+    strength: "Лучше всего показывает, ради чего существует программа: общие моменты, люди и ощутимый командный импакт.",
+    risk: "Мозаика требует строгого отбора фото и коротких подписей, иначе экран станет перегруженной лентой.",
+    typography: "Тёплый rounded display + прямой интерфейсный текст",
+    layout: "Асимметричная photo mosaic, team pulse и короткие story fragments",
+    navigation: "Плавающий social dock с центральным действием «Поделиться»",
   },
 ];
