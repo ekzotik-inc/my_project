@@ -12,11 +12,11 @@ type Tab = "progress" | "team" | "leaders" | "guide";
 const rankAccents = ["bg-[#F7E6A2] text-[#72520C]", "bg-[#E2F0FA] text-[#2D647D]", "bg-[#FBE8EC] text-[#8C4653]"];
 const rankMarks = ["#1", "#2", "#3"];
 const achievementArt = {
-  first_confirmed: "/assets/achievement/first_confirmed.png",
-  three_confirmed: "/assets/achievement/three_confirmed.png",
-  impact_100: "/assets/achievement/impact_100.png",
-  period_finisher: "/assets/achievement/period_finisher.png",
-  team_spark: "/assets/achievement/team_spark.png",
+  first_confirmed: "https://github.com/ekzotik-inc/my_project/releases/download/achievement-stickers-v1/first_confirmed.webp",
+  three_confirmed: "https://github.com/ekzotik-inc/my_project/releases/download/achievement-stickers-v1/three_confirmed.webp",
+  impact_100: "https://github.com/ekzotik-inc/my_project/releases/download/achievement-stickers-v1/impact_100.webp",
+  period_finisher: "https://github.com/ekzotik-inc/my_project/releases/download/achievement-stickers-v1/period_finisher.webp",
+  team_spark: "https://github.com/ekzotik-inc/my_project/releases/download/achievement-stickers-v1/team_spark.webp",
 } as const;
 const tabItems: { id: Tab; label: string; icon: typeof Leaf }[] = [
   { id: "progress", label: "Мой путь", icon: Leaf },
