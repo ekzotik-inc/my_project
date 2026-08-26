@@ -150,3 +150,4 @@
 - [ ] Проверить gesture, keyboard и reduced-motion поведение gallery carousel, исключив автопрокрутку и тяжёлые layout-анимации в Telegram WebView.
 - [x] Перенести «Галерею» из карточки «Мой путь» в отдельную пятую вкладку нижней participant-навигации.
 - [x] Переработать visual/interactions gallery в точную mobile-first интерпретацию OriginKit Stacked Carousel reference вместо упрощённой стопки карточек.
+- [x] Удалить техническую performance-подсказку из нижней части participant gallery, сохранив саму оптимизированную реализацию.
