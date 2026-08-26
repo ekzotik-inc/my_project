@@ -20,16 +20,18 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { CalendarRange, CheckSquare2, Download, HeartHandshake, LayoutDashboard, LogOut, MessageCircleHeart, PanelLeft, Send, Settings, Sparkles, Users, UsersRound } from "lucide-react";
+import { CalendarRange, CheckSquare2, ClipboardCheck, Download, HeartHandshake, LayoutDashboard, LogOut, MessageCircleHeart, PanelLeft, Send, Settings, Sparkles, Users, UsersRound } from "lucide-react";
 import { CSSProperties, FormEvent, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 import { VisibleDeedMark } from "./VisibleDeedMark";
+import { trpc } from "@/lib/trpc";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Обзор", path: "/", access: "chief" },
   { icon: Users, label: "Участники", path: "/participants", access: "moderator" },
+  { icon: ClipboardCheck, label: "На проверке", path: "/review", access: "moderator", badge: true },
   { icon: UsersRound, label: "Команды", path: "/teams", access: "chief" },
   { icon: CalendarRange, label: "Периоды", path: "/periods", access: "chief" },
   { icon: CheckSquare2, label: "Активности", path: "/activities", access: "chief" },
@@ -124,6 +126,9 @@ function DashboardLayoutContent({
   const activeMenuItem = menuItems.find(item => item.path === location);
   const visibleMenuItems = menuItems.filter(item => item.access === "moderator" || user?.role === "admin");
   const isMobile = useIsMobile();
+  const canModerate = user?.role === "admin" || user?.role === "pc_admin";
+  const { data: reviewCenter } = trpc.admin.reviewCenter.dashboard.useQuery(undefined, { enabled: canModerate });
+  const awaitingReview = reviewCenter?.summary.awaitingReview ?? 0;
 
   useEffect(() => {
     if (isCollapsed) {
@@ -203,6 +208,7 @@ function DashboardLayoutContent({
                         className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
                       />
                       <span>{item.label}</span>
+                      {item.badge && awaitingReview > 0 ? <span className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-[#C9474F] px-1.5 py-0.5 text-[10px] font-extrabold leading-none text-white group-data-[collapsible=icon]:absolute group-data-[collapsible=icon]:right-1 group-data-[collapsible=icon]:top-1">{awaitingReview > 99 ? "99+" : awaitingReview}</span> : null}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );

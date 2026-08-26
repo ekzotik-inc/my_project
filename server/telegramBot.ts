@@ -237,6 +237,21 @@ export function formatReportApprovalNotification(input: { title: string; points:
   return `<b>${premiumEmoji("applause")} Ваш вклад подтверждён</b>\n\nP&amp;C приняла результат по заданию <b>${escapeHtml(input.title)}</b>.\n\nНа ваш счёт добавлено <b>${premiumEmoji("score")} +${input.points} баллов</b>. Спасибо, что сделали это дело реальным — оно уже усилило результат команды.\n\n<i>В меню можно посмотреть, какой следующий шаг появился в вашем маршруте.</i>`;
 }
 
+export async function notifyReportModerationDecision(input: {
+  participantChatId: string;
+  activityTitle: string;
+  decision: "approved" | "rejected";
+  awardedPoints: number;
+  comment?: string | null;
+}) {
+  if (input.decision === "approved") {
+    return sendRichMessage(input.participantChatId, formatReportApprovalNotification({ title: input.activityTitle, points: input.awardedPoints }));
+  }
+
+  const comment = input.comment?.trim() || "Пожалуйста, дополните результат и отправьте его повторно.";
+  return sendRichMessage(input.participantChatId, `<b>${premiumEmoji("note")} P&amp;C просит немного доработать результат</b>\n\n<b>${escapeHtml(input.activityTitle)}</b>\n\n${escapeHtml(comment)}\n\n<i>Откройте задание в меню, дополните материалы и отправьте результат повторно. Всё остальное уже сохранено.</i>`);
+}
+
 async function notifyApprovedParticipants(text: string, replyMarkup?: ReplyMarkup) {
   const recipients = await telegramDb.listApprovedParticipantChats();
   const delivery = await Promise.allSettled(recipients.map(recipient => sendRichMessage(recipient.telegramChatId, text, replyMarkup)));

@@ -5,7 +5,8 @@ import * as db from "./db";
 import * as telegramDb from "./telegramDb";
 import * as activityAdminDb from "./activityAdminDb";
 import * as broadcastDb from "./broadcastDb";
-import { notifyNewActivity, notifyNewPeriod, notifyRegistrationDecision, syncTelegramIntegration } from "./telegramBot";
+import * as reviewCenterDb from "./reviewCenterDb";
+import { notifyNewActivity, notifyNewPeriod, notifyRegistrationDecision, notifyReportModerationDecision, syncTelegramIntegration } from "./telegramBot";
 import { storagePut } from "./storage";
 import { createCurrentDataExport } from "./excelExport";
 import { verifyTelegramMiniAppInitData } from "./telegramMiniApp";
@@ -48,6 +49,22 @@ export const appRouter = router({
   admin: router({
     overview: chiefProcedure.query(() => db.getAdminOverview()),
     communicationDigest: moderationProcedure.query(() => db.getCommunicationDigest()),
+    reviewCenter: router({
+      dashboard: moderationProcedure.query(() => reviewCenterDb.getReviewCenterDashboard()),
+      moderate: moderationProcedure
+        .input(z.object({ assignmentId: z.number().int().positive(), decision: z.enum(["approved", "rejected"]), comment: z.string().max(2000).optional() }))
+        .mutation(async ({ input }) => {
+          const result = await reviewCenterDb.moderateReportFromReviewCenter(input);
+          await notifyReportModerationDecision({
+            participantChatId: result.report.participantChatId,
+            activityTitle: result.report.activityTitle,
+            decision: input.decision,
+            awardedPoints: result.awardedPoints,
+            comment: input.comment,
+          });
+          return { success: true, awardedPoints: result.awardedPoints } as const;
+        }),
+    }),
     teams: router({
       list: chiefProcedure.query(() => db.listTeams()),
       create: chiefProcedure
