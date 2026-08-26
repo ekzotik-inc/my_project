@@ -1,7 +1,35 @@
 import type { Express } from "express";
+import { getAchievementAssetKey } from "../achievementAssetProxy";
 import { storageGetSignedUrl } from "../storage";
 
 export function registerStorageProxy(app: Express) {
+  app.get("/assets/achievement/:id.png", async (req, res) => {
+    const key = getAchievementAssetKey(req.params.id);
+    if (!key) {
+      res.status(404).send("Unknown achievement asset");
+      return;
+    }
+
+    try {
+      const signedUrl = await storageGetSignedUrl(key);
+      const source = await fetch(signedUrl);
+      if (!source.ok) {
+        res.status(502).send("Achievement asset unavailable");
+        return;
+      }
+      const body = Buffer.from(await source.arrayBuffer());
+      res.set({
+        "Content-Type": "image/png",
+        "Cache-Control": "public, max-age=31536000, immutable",
+        "X-Content-Type-Options": "nosniff",
+      });
+      res.status(200).send(body);
+    } catch (err) {
+      console.error("[AchievementAssetProxy] failed:", err);
+      res.status(502).send("Achievement asset unavailable");
+    }
+  });
+
   app.get("/manus-storage/*", async (req, res) => {
     const key = (req.params as Record<string, string>)[0];
     if (!key) {

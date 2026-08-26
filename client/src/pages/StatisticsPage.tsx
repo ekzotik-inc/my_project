@@ -12,11 +12,11 @@ type Tab = "progress" | "team" | "leaders" | "guide";
 const rankAccents = ["bg-[#F7E6A2] text-[#72520C]", "bg-[#E2F0FA] text-[#2D647D]", "bg-[#FBE8EC] text-[#8C4653]"];
 const rankMarks = ["#1", "#2", "#3"];
 const achievementArt = {
-  first_confirmed: "/manus-storage/system/achievement-stickers/first_confirmed_3f12f993.png",
-  three_confirmed: "/manus-storage/system/achievement-stickers/three_confirmed_2254b957.png",
-  impact_100: "/manus-storage/system/achievement-stickers/impact_100_e68bb5fd.png",
-  period_finisher: "/manus-storage/system/achievement-stickers/period_finisher_d8fdfa03.png",
-  team_spark: "/manus-storage/system/achievement-stickers/team_spark_6a35ffae.png",
+  first_confirmed: "/assets/achievement/first_confirmed.png",
+  three_confirmed: "/assets/achievement/three_confirmed.png",
+  impact_100: "/assets/achievement/impact_100.png",
+  period_finisher: "/assets/achievement/period_finisher.png",
+  team_spark: "/assets/achievement/team_spark.png",
 } as const;
 const tabItems: { id: Tab; label: string; icon: typeof Leaf }[] = [
   { id: "progress", label: "Мой путь", icon: Leaf },
@@ -111,5 +111,5 @@ export default function StatisticsPage() {
 }
 
 function AchievementShelf({ achievements }: { achievements: Array<{ id: keyof typeof achievementArt; title: string; current: number; target: number; unlocked: boolean }> }) {
-  return <section className="signal-surface overflow-hidden rounded-[1.55rem] p-4"><div className="flex items-center justify-between"><div><p className="journal-label">ПРИЗНАНИЕ</p><h2 className="mt-1 text-lg font-extrabold tracking-[-0.045em]">Достижения</h2></div><span className="signal-chip rounded-full px-2.5 py-1 text-[10px] font-extrabold">{achievements.filter(item => item.unlocked).length}/{achievements.length}</span></div><div className="mt-4 grid grid-cols-5 gap-1.5">{achievements.map(item => <article key={item.id} className="min-w-0 text-center" title={`${item.title}: ${item.current}/${item.target}`}><div className="mx-auto grid h-14 w-14 place-items-center rounded-[1.15rem] bg-white/80 sm:h-16 sm:w-16"><img src={achievementArt[item.id]} alt="" aria-hidden="true" data-locked={item.unlocked ? "false" : "true"} className="achievement-sticker h-12 w-12 object-contain sm:h-14 sm:w-14" /></div><p className="mt-1.5 line-clamp-2 min-h-7 text-[9px] font-bold leading-3 text-[#384258]">{item.title}</p><span className={`mt-1 inline-flex rounded-full px-1.5 py-0.5 text-[9px] font-extrabold ${item.unlocked ? "bg-[#E1F9B0] text-[#23411B]" : "bg-[#EEF2FF] text-[#3158C9]"}`}>{item.unlocked ? "✓" : `${item.current}/${item.target}`}</span></article>)}</div></section>;
+  return <section className="signal-surface overflow-hidden rounded-[1.55rem] p-4"><div className="flex items-center justify-between"><div><p className="journal-label">ПРИЗНАНИЕ</p><h2 className="mt-1 text-lg font-extrabold tracking-[-0.045em]">Достижения</h2></div><span className="signal-chip rounded-full px-2.5 py-1 text-[10px] font-extrabold">{achievements.filter(item => item.unlocked).length}/{achievements.length}</span></div><div className="mt-4 grid grid-cols-5 gap-1.5">{achievements.map(item => <article key={item.id} className="min-w-0 text-center" title={`${item.title}: ${item.current}/${item.target}`}><img src={achievementArt[item.id]} alt="" aria-hidden="true" data-locked={item.unlocked ? "false" : "true"} className="achievement-sticker mx-auto h-14 w-14 object-contain sm:h-[4.5rem] sm:w-[4.5rem]" /><p className="mt-1.5 line-clamp-2 min-h-7 text-[9px] font-bold leading-3 text-[#384258]">{item.title}</p><span className={`mt-1 inline-flex rounded-full px-1.5 py-0.5 text-[9px] font-extrabold ${item.unlocked ? "bg-[#E1F9B0] text-[#23411B]" : "bg-[#EEF2FF] text-[#3158C9]"}`}>{item.unlocked ? "✓" : `${item.current}/${item.target}`}</span></article>)}</div></section>;
 }

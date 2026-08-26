@@ -124,7 +124,10 @@
 - [x] Упростить key screens: оставить один главный сигнал/CTA на экран, устранить дублирующие объяснения и сократить визуальный шум в data-экранах.
 - [x] Проверить PNG-активы, контраст, загрузку и layout на телефоне/desktop; опубликовать изменённую production-версию.
 - [ ] Провести ручную проверку нового Signal & Stickers опыта Chief, P&C и participant в Telegram Mini App после visual release.
-- [ ] Диагностировать production-загрузку PNG-достижений, которая на реальном Telegram-экране показывает технические placeholder-иконки.
-- [ ] Перенести PNG-бейджи на надёжные project-scoped web asset URLs и подтвердить их доступность из production Mini App.
-- [ ] Упростить mobile-витрину достижений: крупные готовые бейджи, один progress indicator и минимум подписей вместо вложенных ring/placeholder-элементов.
+- [x] Диагностировать production-загрузку PNG-достижений, которая на реальном Telegram-экране показывает технические placeholder-иконки.
+- [x] Перенести PNG-бейджи на надёжные project-scoped web asset URLs и подтвердить их доступность из production Mini App.
+- [x] Упростить mobile-витрину достижений: крупные готовые бейджи, один progress indicator и минимум подписей вместо вложенных ring/placeholder-элементов.
 - [ ] Проверить исправленную витрину в production Telegram Mini App по реальному мобильному экрану.
+- [ ] Заменить временные signed B2 redirects для achievement PNG на постоянную Telegram-compatible production-подачу без broken-image состояния.
+- [ ] Увеличить визуальные achievement stickers и убрать белые asset-рамки в mobile-витрине после исправления asset delivery.
+- [ ] Подтвердить исправленный блок достижений новым реальным скриншотом Telegram Mini App.
