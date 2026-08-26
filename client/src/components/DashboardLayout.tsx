@@ -67,7 +67,7 @@ export default function DashboardLayout({
   }
 
   if (!user) {
-    return <div className="paper-grain flex min-h-screen items-center justify-center bg-[#F8FBF5] p-5 text-center"><div className="max-w-sm rounded-[2rem] bg-white p-7 shadow-[0_24px_55px_-38px_rgba(22,63,47,0.45)]"><VisibleDeedMark className="mx-auto bg-[#163F2F] text-white" /><p className="mt-6 text-[10px] font-extrabold tracking-[0.16em] text-[#55705E]">ДОБРЫЕ ДЕЛА</p><h1 className="mt-2 text-2xl font-extrabold tracking-[-0.05em]">Откройте рабочую панель из Telegram</h1><p className="mt-3 text-sm leading-6 text-muted-foreground">Доступ Chief и P&amp;C определяется по защищённым данным Telegram Mini App — пароль не требуется.</p></div></div>;
+    return <div className="paper-grain flex min-h-screen items-center justify-center bg-[#F7F8FC] p-5 text-center"><div className="signal-surface max-w-sm rounded-[2rem] p-7"><VisibleDeedMark className="mx-auto" /><p className="journal-label mt-6">ДОБРЫЕ ДЕЛА</p><h1 className="mt-2 text-2xl">Откройте панель из Telegram</h1><p className="mt-3 text-sm leading-6 text-muted-foreground">Доступ определяется по защищённым данным Mini App.</p></div></div>;
   }
 
   return (
@@ -177,7 +177,7 @@ function DashboardLayoutContent({
       <div className="relative" ref={sidebarRef}>
         <Sidebar
           collapsible="icon"
-          className="border-r border-[#E8DFC9] bg-[#F9F6EC]/92 backdrop-blur"
+          className="border-r border-[#E7EAF3] bg-[#F9FAFE]/92 backdrop-blur"
           disableTransition={isResizing}
         >
           <SidebarHeader className="h-20 justify-center">
@@ -192,7 +192,7 @@ function DashboardLayoutContent({
               {!isCollapsed ? (
                 <div className="flex min-w-0 items-center gap-2">
                   <VisibleDeedMark className="h-7 w-7 rounded-lg [&_svg:first-child]:h-3.5 [&_svg:first-child]:w-3.5" />
-                  <span className="truncate text-xs font-extrabold tracking-[0.12em] text-[#163F2F]">ДОБРЫЕ ДЕЛА</span>
+                  <span className="truncate text-xs font-extrabold tracking-[0.12em] text-[#182035]">ДОБРЫЕ ДЕЛА</span>
                 </div>
               ) : null}
             </div>
@@ -208,7 +208,7 @@ function DashboardLayoutContent({
                       isActive={isActive}
                       onClick={() => setLocation(item.path)}
                       tooltip={item.label}
-                      className="h-11 rounded-xl font-semibold transition-all hover:bg-[#E8F3EE] data-[active=true]:bg-[#DCEFD7] data-[active=true]:text-[#163F2F]"
+                      className="h-11 rounded-xl font-semibold transition-all hover:bg-[#EEF2FF] data-[active=true]:bg-[#316CFF] data-[active=true]:text-white"
                     >
                       <item.icon
                         className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
@@ -263,24 +263,24 @@ function DashboardLayoutContent({
         />
       </div>
 
-      <SidebarInset className="bg-[radial-gradient(circle_at_95%_0%,rgba(235,211,155,0.28),transparent_22rem),radial-gradient(circle_at_3%_16%,rgba(213,231,217,0.3),transparent_24rem)]">
+      <SidebarInset className="bg-[radial-gradient(circle_at_95%_0%,rgba(49,108,255,0.14),transparent_22rem),radial-gradient(circle_at_3%_16%,rgba(221,247,93,0.2),transparent_24rem)]">
         {isMobile && (
-          <div className="sticky top-0 z-40 flex min-h-16 items-center justify-between border-b border-[#E9DFCB] bg-[#FBF8F0]/92 px-3 pt-[var(--tg-safe-top)] backdrop-blur supports-[backdrop-filter]:backdrop-blur">
+          <div className="sticky top-0 z-40 flex min-h-16 items-center justify-between border-b border-[#E7EAF3] bg-[#FBFCFF]/92 px-3 pt-[var(--tg-safe-top)] backdrop-blur supports-[backdrop-filter]:backdrop-blur">
             <div className="flex items-center gap-2">
-              <SidebarTrigger className="h-10 w-10 rounded-xl border border-[#E3ECE1] bg-white shadow-sm" />
+              <SidebarTrigger className="h-10 w-10 rounded-xl border border-[#E0E5F4] bg-white shadow-sm" />
               <VisibleDeedMark className="h-9 w-9 rounded-xl [&_svg:first-child]:h-4 [&_svg:first-child]:w-4" />
-              <div className="flex flex-col"><span className="text-[9px] font-extrabold tracking-[0.13em] text-[#6A8170]">{user?.role === "admin" ? "CHIEF SPACE" : "P&C SPACE"}</span><span className="text-sm font-extrabold tracking-[-0.025em] text-[#163F2F]">{activeMenuItem?.label ?? "Меню"}</span></div>
+              <div className="flex flex-col"><span className="text-[9px] font-extrabold tracking-[0.13em] text-[#64708E]">{user?.role === "admin" ? "CHIEF" : "P&C"}</span><span className="text-sm font-extrabold tracking-[-0.025em] text-[#182035]">{activeMenuItem?.label ?? "Меню"}</span></div>
             </div>
             {awaitingReview > 0 ? <button onClick={() => setLocation("/review")} className="soft-press rounded-xl bg-[#FFF0F0] px-3 py-2 text-xs font-extrabold text-[#A6444B]">{awaitingReview} ждут</button> : null}
           </div>
         )}
         <main className={`flex-1 p-4 sm:p-5 ${isMobile ? "pb-[calc(6.5rem+var(--tg-safe-bottom))]" : ""}`}><div key={location} className="route-enter h-full">{children}</div></main>
-        {isMobile ? <nav className="fixed inset-x-3 bottom-[calc(0.65rem+var(--tg-safe-bottom))] z-50 flex items-center rounded-[1.45rem] border border-white/90 bg-white/[0.94] p-1.5 shadow-[0_22px_48px_-26px_rgba(22,63,47,0.52)] backdrop-blur" aria-label="Быстрые действия">
+        {isMobile ? <nav className="fixed inset-x-3 bottom-[calc(0.65rem+var(--tg-safe-bottom))] z-50 flex items-center rounded-[1.45rem] border border-white/90 bg-white/[0.94] p-1.5 shadow-[0_22px_48px_-26px_rgba(49,108,255,0.35)] backdrop-blur" aria-label="Быстрые действия">
           {mobileQuickItems.map(item => {
             const active = location === item.path;
-            return <button key={item.path} onClick={() => { telegramSelectionHaptic(); setLocation(item.path); }} className={`soft-press relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[10px] font-extrabold ${active ? "bg-[#163F2F] text-white" : "text-[#587065]"}`}><item.icon className="h-4 w-4" />{item.label}{item.badge && awaitingReview > 0 ? <span className="absolute right-[17%] top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-[#C9474F] px-1 py-0.5 text-[8px] font-extrabold leading-none text-white">{awaitingReview > 99 ? "99+" : awaitingReview}</span> : null}</button>;
+            return <button key={item.path} onClick={() => { telegramSelectionHaptic(); setLocation(item.path); }} className={`soft-press relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[10px] font-extrabold ${active ? "bg-[#316CFF] text-white" : "text-[#64708E]"}`}><item.icon className="h-4 w-4" />{item.label}{item.badge && awaitingReview > 0 ? <span className="absolute right-[17%] top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-[#C9474F] px-1 py-0.5 text-[8px] font-extrabold leading-none text-white">{awaitingReview > 99 ? "99+" : awaitingReview}</span> : null}</button>;
           })}
-          <button onClick={() => { telegramSelectionHaptic(); toggleSidebar(); }} className="soft-press flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[10px] font-extrabold text-[#587065]"><PanelLeft className="h-4 w-4" />Меню</button>
+          <button onClick={() => { telegramSelectionHaptic(); toggleSidebar(); }} className="soft-press flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[10px] font-extrabold text-[#64708E]"><PanelLeft className="h-4 w-4" />Меню</button>
         </nav> : null}
       </SidebarInset>
     </>
