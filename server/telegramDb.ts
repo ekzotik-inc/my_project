@@ -12,6 +12,7 @@ import {
   telegramSettings,
   teams,
 } from "../drizzle/schema";
+import { awardCatalogCompletionBonusInTransaction } from "./achievementCompletionBonus";
 import { getDb } from "./db";
 
 async function requireDb() {
@@ -268,7 +269,7 @@ export async function submitActivityReport(assignmentId: number, participantId: 
 export async function getReportForModeration(assignmentId: number) {
   const db = await requireDb();
   const rows = await db
-    .select({ id: activityAssignments.id, status: activityAssignments.status, participantId: participants.id, participantName: participants.fullName, participantChatId: participants.telegramChatId, participantTeam: teams.name, activityTitle: activities.title, activityPoints: activities.points })
+    .select({ id: activityAssignments.id, status: activityAssignments.status, participantId: participants.id, participantTeamId: participants.teamId, participantName: participants.fullName, participantChatId: participants.telegramChatId, participantTeam: teams.name, activityTitle: activities.title, activityPoints: activities.points })
     .from(activityAssignments)
     .innerJoin(participants, eq(activityAssignments.participantId, participants.id))
     .leftJoin(teams, eq(participants.teamId, teams.id))
@@ -312,9 +313,18 @@ export async function moderateReport(input: { assignmentId: number; moderatorTel
     await db.update(activityAssignments).set({ status: "rejected", awardedPoints: 0, reviewedAt: new Date(), reviewedByParticipantId: moderator.id, moderationComment: comment }).where(eq(activityAssignments.id, input.assignmentId));
     return { report, awardedPoints: 0 };
   }
+  let catalogBonusPoints = 0;
   await db.transaction(async tx => {
     await tx.update(activityAssignments).set({ status: "approved", awardedPoints: report.activityPoints, reviewedAt: new Date(), reviewedByParticipantId: moderator.id, moderationComment: comment }).where(eq(activityAssignments.id, input.assignmentId));
     await tx.insert(pointLedger).values({ participantId: report.participantId, assignmentId: input.assignmentId, periodId: periods[0].id, points: report.activityPoints, eventType: "report_approved", note: comment, createdByParticipantId: moderator.id });
+    const bonus = await awardCatalogCompletionBonusInTransaction({
+      tx,
+      participantId: report.participantId,
+      teamId: report.participantTeamId,
+      periodId: periods[0].id,
+      createdByParticipantId: moderator.id,
+    });
+    catalogBonusPoints = bonus.points;
   });
-  return { report, awardedPoints: report.activityPoints };
+  return { report, awardedPoints: report.activityPoints, catalogBonusPoints };
 }

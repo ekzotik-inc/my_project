@@ -11,6 +11,7 @@ import {
   teams,
 } from "../drizzle/schema";
 import { approveAfterModeration, rejectAfterModeration, type AssignmentWorkflowStatus } from "./activityPolicies";
+import { awardCatalogCompletionBonusInTransaction } from "./achievementCompletionBonus";
 import { getDb } from "./db";
 import * as telegramDb from "./telegramDb";
 
@@ -61,7 +62,7 @@ export function resolveReviewDecision(status: AssignmentWorkflowStatus, decision
 export async function getReviewCenterDashboard() {
   const db = await requireDb();
 
-  const [queueRows, evidenceRows, teamRows, participantRows, workflowRows, activePeriodRows] = await Promise.all([
+  const [queueRows, evidenceRows, teamRows, participantRows, workflowRows, activePeriodRows, participantLedgerRows, teamLedgerRows] = await Promise.all([
     db
       .select({
         assignmentId: activityAssignments.id,
@@ -154,6 +155,16 @@ export async function getReviewCenterDashboard() {
       .from(activityAssignments)
       .groupBy(activityAssignments.status),
     db.select({ title: activityPeriods.title }).from(activityPeriods).where(eq(activityPeriods.status, "active")).limit(1),
+    db
+      .select({ participantId: pointLedger.participantId, awardedPoints: sql<number>`coalesce(sum(${pointLedger.points}), 0)` })
+      .from(pointLedger)
+      .groupBy(pointLedger.participantId),
+    db
+      .select({ teamId: participants.teamId, awardedPoints: sql<number>`coalesce(sum(${pointLedger.points}), 0)` })
+      .from(pointLedger)
+      .innerJoin(participants, eq(pointLedger.participantId, participants.id))
+      .where(and(eq(participants.status, "approved"), sql`${participants.teamId} is not null`))
+      .groupBy(participants.teamId),
   ]);
 
   const evidenceByAssignment = new Map<number, typeof evidenceRows>();
@@ -169,21 +180,23 @@ export async function getReviewCenterDashboard() {
     attachmentCount: Number(row.attachmentCount),
     evidence: evidenceByAssignment.get(row.assignmentId) ?? [],
   }));
+  const pointsByParticipant = new Map(participantLedgerRows.map(row => [row.participantId, Number(row.awardedPoints)]));
+  const pointsByTeam = new Map(teamLedgerRows.map(row => [row.teamId, Number(row.awardedPoints)]));
   const normalizedTeams = teamRows.map(row => ({
     ...row,
     memberCount: Number(row.memberCount),
     assignedCount: Number(row.assignedCount),
     submittedCount: Number(row.submittedCount),
     approvedCount: Number(row.approvedCount),
-    awardedPoints: Number(row.awardedPoints),
-  }));
+    awardedPoints: pointsByTeam.get(row.id) ?? 0,
+  })).sort((left, right) => right.awardedPoints - left.awardedPoints || right.approvedCount - left.approvedCount || (left.name || "").localeCompare(right.name || "", "ru"));
   const normalizedParticipants = participantRows.map(row => ({
     ...row,
     assignedCount: Number(row.assignedCount),
     submittedCount: Number(row.submittedCount),
     approvedCount: Number(row.approvedCount),
-    awardedPoints: Number(row.awardedPoints),
-  }));
+    awardedPoints: pointsByParticipant.get(row.id) ?? 0,
+  })).sort((left, right) => right.awardedPoints - left.awardedPoints || right.approvedCount - left.approvedCount || (left.name || "").localeCompare(right.name || "", "ru"));
   const statusCounts = Object.fromEntries(workflowRows.map(row => [row.status, Number(row.total)]));
   const analytics = buildReviewAnalytics({
     participants: normalizedParticipants,
@@ -234,10 +247,19 @@ export async function moderateReportFromReviewCenter(input: {
     return { report, awardedPoints: 0 };
   }
 
+  let catalogBonusPoints = 0;
   await db.transaction(async tx => {
     await tx.update(activityAssignments).set({ status: transition.status, awardedPoints: transition.awardedPoints, reviewedAt: new Date(), reviewedByParticipantId: null, moderationComment: comment }).where(eq(activityAssignments.id, input.assignmentId));
     await tx.insert(pointLedger).values({ participantId: report.participantId, assignmentId: input.assignmentId, periodId: periods[0].id, points: transition.awardedPoints, eventType: "report_approved", note: comment, createdByParticipantId: null });
+    const bonus = await awardCatalogCompletionBonusInTransaction({
+      tx,
+      participantId: report.participantId,
+      teamId: report.participantTeamId,
+      periodId: periods[0].id,
+      createdByParticipantId: null,
+    });
+    catalogBonusPoints = bonus.points;
   });
 
-  return { report, awardedPoints: transition.awardedPoints };
+  return { report, awardedPoints: transition.awardedPoints, catalogBonusPoints };
 }

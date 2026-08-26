@@ -551,9 +551,14 @@ async function handleCallback(callback: TelegramCallback) {
         return sendRichMessage(chatId, "*Нужен короткий комментарий*\nНапишите, что стоит дополнить в результате, чтобы участник мог вернуться с обновлёнными материалами.");
       }
       const result = await telegramDb.moderateReport({ assignmentId, moderatorTelegramId: userId, decision: "approved" });
+      const catalogBonusPoints = result.catalogBonusPoints ?? 0;
       await sendRichMessage(result.report.participantChatId, formatReportApprovalNotification({ title: result.report.activityTitle, points: result.awardedPoints }));
-      await notifyModerators(`*Результат подтверждён*\n${escapeMarkdown(result.report.activityTitle)} · участнику добавлено +${result.awardedPoints} баллов.`, userId);
-      return sendRichMessage(chatId, `*Результат подтверждён*\n────────────\n\nУчастнику добавлено *+${result.awardedPoints} баллов*. Уведомление уже отправлено.`);
+      if (catalogBonusPoints) {
+        await sendRichMessage(result.report.participantChatId, `<b>${premiumEmoji("applause")} Весь каталог достижений закрыт</b>\n\nP&amp;C подтвердили финальный результат. <b>+${catalogBonusPoints} баллов</b> уже добавлены в вашу личную копилку и в счёт команды.\n\n<i>${premiumEmoji("sparkle")} Спасибо за устойчивый вклад!</i>`);
+      }
+      const addedPoints = result.awardedPoints + catalogBonusPoints;
+      await notifyModerators(`*Результат подтверждён*\n${escapeMarkdown(result.report.activityTitle)} · участнику добавлено +${addedPoints} баллов${catalogBonusPoints ? `, включая +${catalogBonusPoints} за полный каталог достижений` : ""}.`, userId);
+      return sendRichMessage(chatId, `*Результат подтверждён*\n────────────\n\nУчастнику добавлено *+${result.awardedPoints} баллов*${catalogBonusPoints ? ` и *+${catalogBonusPoints} за полный каталог достижений*` : ""}. Уведомление уже отправлено.`);
     }
   } catch (error) {
     await sendMessage(chatId, error instanceof Error ? error.message : "Не удалось выполнить действие.");

@@ -202,7 +202,7 @@ export const reportAttachments = mysqlTable(
   table => [index("report_attachments_response_idx").on(table.responseId)]
 );
 
-export const pointLedgerEventValues = ["report_approved", "manual_adjustment"] as const;
+export const pointLedgerEventValues = ["report_approved", "manual_adjustment", "achievement_catalog_complete"] as const;
 
 /** Append-only points journal. Only approved reports or explicit adjustment can create an entry. */
 export const pointLedger = mysqlTable(
@@ -221,6 +221,22 @@ export const pointLedger = mysqlTable(
   table => [
     uniqueIndex("point_ledger_assignment_unique").on(table.assignmentId),
     index("point_ledger_participant_period_idx").on(table.participantId, table.periodId),
+  ]
+);
+
+/** Immutable marker for the single 200-point reward for a completed 20-achievement catalogue. */
+export const achievementBonuses = mysqlTable(
+  "achievementBonuses",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    participantId: int("participantId").notNull().references(() => participants.id, { onDelete: "cascade" }),
+    periodId: int("periodId").notNull().references(() => activityPeriods.id, { onDelete: "cascade" }),
+    points: int("points").default(200).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [
+    uniqueIndex("achievement_bonuses_participant_unique").on(table.participantId),
+    index("achievement_bonuses_period_idx").on(table.periodId),
   ]
 );
 
